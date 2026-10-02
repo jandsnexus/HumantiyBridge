@@ -212,11 +212,15 @@ html.hb-skip-loader .hb-loader { display: none; }
   content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: linear-gradient(90deg, rgba(15, 27, 45, .96) 0%, rgba(15, 27, 45, .78) 32%, rgba(15, 27, 45, 0) 58%);
 }
-.hb-hero__map { position: absolute; inset: 0; opacity: 0; transition: opacity .6s var(--ease); }
+.hb-hero__map { position: absolute; inset: 0; overflow: hidden; opacity: 0; transition: opacity .6s var(--ease); }
 .hb-hero__map.is-ready { opacity: 1; }
 .hb-map__svg { position: absolute; inset: 0; z-index: 0; display: block; }
-.hb-map__land path { fill: #24344c; stroke: #31435e; stroke-width: .4; }
-.hb-map__hot path { fill-opacity: .9; stroke-width: 1; cursor: pointer; transition: fill-opacity .15s; }
+.hb-map__svg { cursor: default; }
+.hb-hero__map.is-zoomed .hb-map__svg { cursor: grab; }
+.hb-hero__map.is-zoomed .hb-map__svg:active { cursor: grabbing; }
+.hb-map__land path { fill: #24344c; stroke: #31435e; stroke-width: .4; vector-effect: non-scaling-stroke; }
+.hb-map__hot path { fill-opacity: .9; stroke-width: 1; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill-opacity .15s; }
+.hb-map__pins g.is-out { display: none; }
 .hb-map__hot path:hover { fill-opacity: 1; }
 .hb-pin__ring { fill: rgba(15, 27, 45, .35); stroke-width: 2; }
 .hb-pin__dot { fill: #fff; }
@@ -232,6 +236,28 @@ html.hb-skip-loader .hb-loader { display: none; }
 }
 .hb-map__label.is-left { transform: translate(calc(-100% - 14px), -50%); }
 .hb-map__label:hover, .hb-map__label:focus-visible { background: rgba(9, 16, 29, .95); box-shadow: 0 0 0 2px var(--pin); }
+.hb-map__label[hidden] { display: none; }
+
+/* Zoom-Buttons + Hinweis (Phase 3) */
+.hb-map__controls {
+  position: absolute; top: 16px; right: 16px; z-index: 4;
+  display: grid; overflow: hidden; border-radius: 10px;
+  background: rgba(9, 16, 29, .7); border: 1px solid rgba(255, 255, 255, .14);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.hb-map__ctrl { display: grid; place-items: center; width: 36px; height: 36px; color: #fff; transition: background-color .15s, opacity .15s; }
+.hb-map__ctrl + .hb-map__ctrl { border-top: 1px solid rgba(255, 255, 255, .12); }
+.hb-map__ctrl .hb-icon { width: 18px; height: 18px; }
+.hb-map__ctrl:hover:not(:disabled) { background: rgba(255, 255, 255, .1); }
+.hb-map__ctrl:disabled { opacity: .35; cursor: default; }
+.hb-map__ctrl:focus-visible { outline-offset: -3px; }
+.hb-map__hint {
+  position: absolute; left: 70%; top: 50%; z-index: 4; pointer-events: none;
+  transform: translate(-50%, -50%); padding: 8px 14px; border-radius: 999px;
+  background: rgba(9, 16, 29, .88); color: #fff; font-size: 13px; font-weight: 500; white-space: nowrap;
+  opacity: 0; transition: opacity .2s;
+}
+.hb-map__hint.is-visible { opacity: 1; }
 
 .hb-hero__content { position: relative; z-index: 3; max-width: 470px; padding: 48px 36px 40px; }
 .hb-hero__kicker { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #c9d4e4; }
@@ -471,6 +497,8 @@ a.hb-follow__item:hover .hb-follow__icon { background: #e3eaf4; }
   .hb-hero__map { order: 2; position: relative; inset: auto; height: 280px; }
   .hb-hero__map::before { content: ""; position: absolute; inset: 0 0 auto; height: 40px; z-index: 1; pointer-events: none; background: linear-gradient(180deg, var(--night), rgba(15, 27, 45, 0)); }
   .hb-hero__all { right: 12px; bottom: 12px; }
+  .hb-map__controls { top: 44px; right: 12px; }
+  .hb-map__hint { left: 50%; }
 
   .hb-follow__list { grid-template-columns: minmax(0, 1fr); }
   .hb-follow__list li + li { border-top: 1px solid var(--line); }
