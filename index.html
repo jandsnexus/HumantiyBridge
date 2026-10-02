@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>HumanityBridge – Hoffnung in Kriegsgebieten</title>
+  <meta name="description" content="HumanityBridge verbindet Menschen, die helfen wollen, mit Menschen in Kriegs- und Krisengebieten.">
+  <meta name="theme-color" content="#0f1b2d">
+  <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    /* Ladescreen nur einmal pro Session: Flag vor dem ersten Paint setzen, sonst blitzt er auf. */
+    try { if (sessionStorage.getItem("hb-loader-seen")) document.documentElement.classList.add("hb-skip-loader"); } catch (e) {}
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <a class="hb-skip" href="#inhalt">Zum Inhalt springen</a>
+
+  <!-- Ladescreen: blockiert nie, Tippen überspringt, CSS-Fallback blendet ohne JS aus -->
+  <div class="hb-loader" id="hb-loader" aria-hidden="true">
+    <div class="hb-loader__inner">
+      <img class="hb-loader__logo" src="assets/img/logo.svg" alt="" width="132" height="138">
+      <span class="hb-loader__name">HumanityBridge</span>
+      <span class="hb-loader__bar"><span></span></span>
+    </div>
+  </div>
+
+  <header class="hb-header">
+    <a class="hb-brand" href="#start" aria-label="HumanityBridge Startseite">
+      <img class="hb-brand__logo" src="assets/img/logo.svg" alt="" width="40" height="42">
+      <span class="hb-brand__name">HumanityBridge</span>
+    </a>
+
+    <nav class="hb-topnav" aria-label="Hauptnavigation">
+      <a href="#start" data-nav="start">Startseite</a>
+      <a href="#laender" data-nav="laender">Länder</a>
+      <a href="#projekte" data-nav="projekte">Projekte</a>
+      <a href="#ueber-uns" data-nav="ueber-uns">Über uns</a>
+      <a href="#kontakt" data-nav="kontakt">Kontakt</a>
+    </nav>
+
+    <div class="hb-header__actions">
+      <div class="hb-search" id="hb-search">
+        <button class="hb-iconbtn" id="hb-search-toggle" type="button" aria-label="Suche öffnen" aria-expanded="false" aria-controls="hb-search-panel" data-icon="search"></button>
+        <div class="hb-search__panel" id="hb-search-panel" hidden>
+          <label class="hb-visually-hidden" for="hb-search-input">Länder und Projekte suchen</label>
+          <input id="hb-search-input" type="search" placeholder="Land oder Projekt suchen" autocomplete="off">
+          <ul class="hb-search__results" id="hb-search-results" role="listbox" aria-label="Suchergebnisse"></ul>
+        </div>
+      </div>
+      <button class="hb-btn hb-btn--dark" type="button" data-donate aria-label="Spenden">
+        <span data-icon="heart"></span><span>Spenden</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="hb-shell">
+    <!-- Seitenmenü: Desktop links, Mobil als Leiste unten (gleiches Element) -->
+    <nav class="hb-sidenav" aria-label="Seitenmenü">
+      <a href="#start" data-nav="start"><span data-icon="house"></span><span>Startseite</span></a>
+      <a href="#laender" data-nav="laender"><span data-icon="globe"></span><span>Länder</span></a>
+      <a href="#projekte" data-nav="projekte"><span data-icon="box"></span><span>Projekte</span></a>
+      <a href="#ueber-uns" data-nav="ueber-uns"><span data-icon="users"></span><span>Über uns</span></a>
+      <a href="#kontakt" data-nav="kontakt"><span data-icon="mail"></span><span>Kontakt</span></a>
+    </nav>
+
+    <main id="inhalt" class="hb-main">
+      <section class="hb-hero" id="start" aria-labelledby="hb-hero-title">
+        <div class="hb-hero__map" id="hb-map" aria-hidden="false"></div>
+        <div class="hb-hero__content">
+          <p class="hb-hero__kicker">Humanitäre Hilfe. Echte Wirkung.</p>
+          <h1 class="hb-hero__title" id="hb-hero-title">
+            <span class="t-white">Hoffnung</span> <span class="t-blue">in</span><br>
+            <span class="t-white">Krieg</span><span class="t-fade">s</span><span class="t-blue">gebieten.</span>
+          </h1>
+          <p class="hb-hero__text">Wir verbinden Menschen, die helfen wollen,<br class="hb-br-desk"> mit Menschen, die es am dringendsten brauchen.<br> Spende heute. Hilf morgen.</p>
+          <div class="hb-hero__actions">
+            <button class="hb-btn hb-btn--light" type="button" data-donate>
+              <span>Jetzt spenden</span><span data-icon="arrow-right"></span>
+            </button>
+            <a class="hb-btn hb-btn--ghost" href="#ueber-uns">Mehr erfahren</a>
+          </div>
+        </div>
+        <button class="hb-btn hb-btn--ghost hb-btn--sm hb-hero__all" type="button" data-open-countries>
+          <span>Alle Länder anzeigen</span><span data-icon="arrow-right"></span>
+        </button>
+      </section>
+
+      <aside class="hb-panel hb-follow" aria-labelledby="hb-follow-title">
+        <h2 class="hb-panel__title" id="hb-follow-title">Folge unserer Arbeit</h2>
+        <ul class="hb-follow__list" id="hb-follow-list"></ul>
+      </aside>
+
+      <section class="hb-crisis" id="laender" aria-labelledby="hb-crisis-title">
+        <div class="hb-section-head">
+          <div>
+            <h2 class="hb-h2" id="hb-crisis-title">Aktuelle Krisenländer</h2>
+            <p class="hb-sub">Klick auf ein Land, um mehr über die Situation und unsere Projekte zu erfahren.</p>
+          </div>
+          <button class="hb-link" type="button" data-open-countries>
+            <span>Alle Länder anzeigen</span><span data-icon="arrow-right"></span>
+          </button>
+        </div>
+        <div class="hb-cards" id="hb-cards" role="list"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="hb-bottom">
+    <section class="hb-steps" id="ueber-uns" aria-labelledby="hb-steps-title">
+      <h2 class="hb-h2" id="hb-steps-title">So funktioniert’s</h2>
+      <ol class="hb-steps__list">
+        <li class="hb-step">
+          <span class="hb-step__icon" data-icon="search"></span>
+          <h3>1. Informieren</h3>
+          <p>Wähle ein Land oder Projekt aus und erfahre mehr über die aktuelle Lage.</p>
+        </li>
+        <li class="hb-step">
+          <span class="hb-step__icon" data-icon="heart"></span>
+          <h3>2. Spenden</h3>
+          <p>Unterstütze mit einem Betrag deiner Wahl.</p>
+        </li>
+        <li class="hb-step">
+          <span class="hb-step__icon" data-icon="truck"></span>
+          <h3>3. Hilfe vor Ort</h3>
+          <p>Wir sorgen dafür, dass deine Spende direkt bei den Menschen ankommt – z.&nbsp;B. in Form von Essen, Wasser, Medizin und Schutzunterkünften.</p>
+        </li>
+        <li class="hb-step">
+          <span class="hb-step__icon" data-icon="chart-line"></span>
+          <h3>4. Wirkung sehen</h3>
+          <p>Du erhältst regelmäßige Updates und kannst den Fortschritt unserer Projekte mitverfolgen.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="hb-project" id="projekte" aria-label="Aktuelles Projekt">
+      <div id="hb-project"></div>
+    </section>
+
+    <section class="hb-quote" id="hb-quote" aria-labelledby="hb-quote-title">
+      <div class="hb-quote__inner">
+        <h2 class="hb-quote__title" id="hb-quote-title">„Jede Spende ist ein Zeichen, dass die Welt nicht wegschaut.“</h2>
+        <p>Gemeinsam können wir Leben retten, Hoffnung schenken und echte Veränderungen möglich machen.</p>
+        <button class="hb-btn hb-btn--glass" type="button" data-donate>
+          <span>Jetzt Teil der Lösung werden</span><span data-icon="arrow-right"></span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <footer class="hb-footer" id="kontakt">
+    <div class="hb-footer__brand">
+      <img class="hb-brand__logo" src="assets/img/logo.svg" alt="" width="40" height="42">
+      <span class="hb-brand__name">HumanityBridge</span>
+    </div>
+    <div class="hb-footer__social" id="hb-footer-social"></div>
+    <p class="hb-footer__note">Impressum und Datenschutz folgen vor dem Livegang.</p>
+    <p class="hb-footer__copy">© <span id="hb-year"></span> HumanityBridge</p>
+  </footer>
+
+  <!-- Bericht-Panel: Desktop von rechts, Mobil als Bottom-Sheet -->
+  <div class="hb-drawer" id="hb-drawer" hidden>
+    <div class="hb-drawer__backdrop" data-drawer-close></div>
+    <div class="hb-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="hb-drawer-title" tabindex="-1">
+      <button class="hb-iconbtn hb-drawer__close" type="button" aria-label="Schließen" data-drawer-close data-icon="x"></button>
+      <div class="hb-drawer__body" id="hb-drawer-body"></div>
+    </div>
+  </div>
+
+  <div class="hb-toast" id="hb-toast" role="status" aria-live="polite"></div>
+</body>
+</html>
