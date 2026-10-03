@@ -391,6 +391,23 @@ a.hb-follow__item:hover .hb-follow__icon { background: #e3eaf4; }
 .hb-footer .hb-brand__logo { width: 30px; }
 .hb-footer .hb-brand__name { font-size: 16px; }
 .hb-footer__social { display: flex; gap: 4px; }
+.hb-footer__links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.hb-footer__links a { color: var(--ink); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; }
+.hb-footer__links a:hover { color: var(--blue-strong); }
+
+/* ---------- Rechtliche Seiten (Impressum) ---------- */
+.hb-legal-page { padding-bottom: 0 !important; }
+.hb-header--simple { display: flex; justify-content: space-between; gap: 12px; }
+.hb-legal { max-width: 760px; margin: 0 auto; padding: 40px 24px 56px; display: grid; gap: 28px; }
+.hb-legal h1 { font-size: 32px; font-weight: 800; letter-spacing: -.02em; }
+.hb-legal section { display: grid; gap: 8px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+.hb-legal section:last-child { border-bottom: 0; }
+.hb-legal h2 { font-size: 17px; font-weight: 700; }
+.hb-legal p, .hb-legal li { font-size: 15px; line-height: 1.7; color: #334155; }
+.hb-legal__team { display: grid; gap: 2px; }
+/* Platzhalter: vor dem Livegang ersetzen */
+.hb-todo { background: #fff3bf; border: 1px dashed #e0b400; border-radius: 4px; padding: 0 6px; color: #7a5a00; font-weight: 600; }
+@media (max-width: 900px) { .hb-legal { padding: 28px 16px 40px; } .hb-legal h1 { font-size: 26px; } }
 
 /* ---------- 13 Drawer (Bericht) ---------- */
 .hb-drawer { position: fixed; inset: 0; z-index: 100; }
@@ -427,6 +444,11 @@ a.hb-follow__item:hover .hb-follow__icon { background: #e3eaf4; }
 .hb-report__stats strong { font-size: 15px; }
 .hb-report__stats small { font-size: 12px; }
 
+.hb-sources { display: grid; gap: 8px; margin: -4px 0 0; padding-left: 20px; list-style: decimal; font-size: 13px; color: var(--muted); }
+.hb-sources li { padding-left: 2px; overflow-wrap: anywhere; }
+.hb-sources a { color: var(--blue-strong); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; }
+.hb-sources a:hover { color: var(--ink); }
+.hb-sources span { display: block; font-size: 12px; color: var(--muted); }
 .hb-list { display: grid; }
 .hb-listrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 6px; border-bottom: 1px solid var(--line); text-align: left; border-radius: 6px; }
 .hb-listrow:hover { background: var(--soft); }
