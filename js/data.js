@@ -42,7 +42,15 @@ export function normalizeSite(raw) {
         badge: { text: str(c.badge?.text), tone: str(c.badge?.tone) },
         stats: arr(c.stats).slice(0, 2).map((st) => ({ icon: str(st?.icon), value: str(st?.value), label: str(st?.label) }))
           .filter((st) => st.value || st.label),
-        report: { updatedAt: str(c.report?.updatedAt), paragraphs: paragraphs(c.report?.text) }
+        report: {
+          updatedAt: str(c.report?.updatedAt),
+          paragraphs: paragraphs(c.report?.text),
+          // Quellen: nur echte http(s)-Links, max. 10
+          sources: arr(c.report?.sources)
+            .map((q) => ({ title: str(q?.title).slice(0, 120), url: str(q?.url).trim() }))
+            .filter((q) => /^https?:\/\/\S+\.\S+/i.test(q.url))
+            .slice(0, 10)
+        }
       })),
     moreCountries: { text: str(r.moreCountries?.text), coverUrl: str(r.moreCountries?.coverUrl) },
     featuredProject: featured && {
