@@ -14,6 +14,7 @@ import { processAndUpload } from "./upload.js";
 const $ = (sel, root = document) => root.querySelector(sel);
 const MAX_DOC_CHARS = 900_000; // Firestore-Limit liegt bei 1 MB pro Dokument
 const MAP_COLORS = ["#ff3b4e", "#ff4d6d", "#ff8a1f", "#f5c518", "#9b6bff", "#2f9bff"];
+const COLOR_NAMES = ["Rot", "Pink", "Orange", "Gelb", "Lila", "Blau"];
 const TONES = { red: "Rot", orange: "Orange", blue: "Blau", grey: "Grau" };
 const URL_OK = /^https?:\/\/\S+\.\S+/i;
 const MAX_SOURCES = 10;
@@ -424,8 +425,8 @@ function openCountryEditor(existing) {
     <div class="ad-field">
       <span>Farbe auf der Karte</span>
       <div class="ad-swatches">
-        ${MAP_COLORS.map((col) => `<label class="ad-swatch" style="--c:${col}"><input type="radio" name="mapColor" value="${col}" ${c.mapColor === col ? "checked" : ""}><span></span></label>`).join("")}
-        <label class="ad-swatch ad-swatch--custom" title="Eigene Farbe"><input type="color" name="mapColorCustom" value="${safeColor(c.mapColor)}"></label>
+        ${MAP_COLORS.map((col, i) => `<label class="ad-swatch" style="--c:${col}" title="${COLOR_NAMES[i]}"><input type="radio" name="mapColor" value="${col}" aria-label="Kartenfarbe ${COLOR_NAMES[i]}" ${c.mapColor === col ? "checked" : ""}><span></span></label>`).join("")}
+        <label class="ad-swatch ad-swatch--custom" title="Eigene Farbe"><input type="color" name="mapColorCustom" aria-label="Eigene Kartenfarbe wählen" value="${safeColor(c.mapColor)}"></label>
       </div>
     </div>
 
