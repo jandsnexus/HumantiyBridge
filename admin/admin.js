@@ -7,7 +7,7 @@ import { loadAuth, loadFirestore } from "../js/firebase.js";
 import { SAMPLE_DATA, STAT_ICONS, PROJECT_TAGS, flagUrlFor } from "../js/sample-data.js";
 import { createMap } from "../js/map.js";
 import { icon } from "../js/icons.js";
-import { esc, imgTag, hydrateIcons, toast, safeColor } from "../js/util.js";
+import { esc, imgTag, hydrateIcons, toast, safeColor, socialUrl } from "../js/util.js";
 import { matchCountry, byKey, countryNames } from "./country-match.js";
 import { processAndUpload } from "./upload.js";
 
@@ -126,7 +126,9 @@ function sanitize(raw) {
   const st = r.settings ?? {};
   d.settings.donationsEnabled = st.donationsEnabled === true;
   for (const k of ["tiktok", "instagram"]) {
-    d.settings.socials[k] = { url: s(st.socials?.[k]?.url, 300), handle: s(st.socials?.[k]?.handle, 40) };
+    const rawUrl = s(st.socials?.[k]?.url, 300).trim();
+    // Alte, unvollständige Links (z. B. ohne https://) gleich vervollständigen; Ungültiges bleibt sichtbar zum Korrigieren
+    d.settings.socials[k] = { url: socialUrl(rawUrl, k) || rawUrl, handle: s(st.socials?.[k]?.handle, 40) };
   }
   d.settings.quoteBackgroundUrl = s(st.quoteBackgroundUrl, 500);
   d.moreCountries = { text: s(r.moreCountries?.text, 120), coverUrl: s(r.moreCountries?.coverUrl, 500) };
@@ -275,6 +277,17 @@ async function loadData() {
 
 async function publish() {
   if (!state.dirty || state.busy || state.uploads > 0) return;
+  for (const platform of ["tiktok", "instagram"]) {
+    const url = state.data.settings.socials[platform].url;
+    if (url && !socialUrl(url, platform)) {
+      document.querySelector('.ad-tab[data-tab="settings"]').click();
+      const form = $("#ad-settings-form");
+      checkSocialField(form, platform);
+      form.elements.namedItem(`${platform}Url`).focus();
+      toast(`Bitte zuerst den ${SOCIAL_LABEL[platform]}-Link korrigieren.`);
+      return;
+    }
+  }
   const json = JSON.stringify(state.data);
   if (json.length > MAX_DOC_CHARS) {
     alert("Die Inhalte sind zu groß zum Speichern (Limit ca. 1 MB). Bitte lange Berichte kürzen.");
@@ -787,6 +800,34 @@ function renderSettings() {
   moreField.set(state.data.moreCountries.coverUrl);
 }
 
+const SOCIAL_LABEL = { tiktok: "TikTok", instagram: "Instagram" };
+
+/** Prüft/vervollständigt ein Social-Feld. Gibt false zurück, wenn der Inhalt ungültig ist. */
+function checkSocialField(form, platform) {
+  const input = form.elements.namedItem(`${platform}Url`);
+  const err = form.querySelector(`[data-err="${platform}Url"]`);
+  const raw = input.value.trim();
+  const norm = socialUrl(raw, platform);
+  const bad = !!raw && !norm;
+  input.classList.toggle("is-invalid", bad);
+  input.setAttribute("aria-invalid", String(bad));
+  err.hidden = !bad;
+  err.textContent = bad ? `Das ist kein gültiger ${SOCIAL_LABEL[platform]}-Link. Am einfachsten den Profil-Link aus der App kopieren oder nur @euername eintragen.` : "";
+  if (bad) return false;
+  const social = state.data.settings.socials[platform];
+  if (norm && input.value !== norm) input.value = norm; // vollständigen Link anzeigen
+  if (social.url !== norm) { social.url = norm; setDirty(true); }
+  // Name automatisch übernehmen, falls noch leer
+  const handleInput = form.elements.namedItem(`${platform}Handle`);
+  const m = norm.match(platform === "tiktok" ? /tiktok\.com\/@([A-Za-z0-9._]+)/i : /instagram\.com\/([A-Za-z0-9._]+)/i);
+  if (m && !handleInput.value.trim()) {
+    handleInput.value = `@${m[1]}`;
+    social.handle = `@${m[1]}`;
+    setDirty(true);
+  }
+  return true;
+}
+
 function initSettings() {
   const form = $("#ad-settings-form");
   quoteField = imageField(form.querySelector('[data-image="quote"]'), {
@@ -815,10 +856,10 @@ function initSettings() {
     setDirty(true);
   });
   // Links prüfen, sobald man das Feld verlässt
+  // Social-Links beim Verlassen des Feldes vervollständigen (z. B. "@name" → https://www.tiktok.com/@name)
   form.addEventListener("focusout", (e) => {
-    if (e.target.type !== "url") return;
-    const v = e.target.value.trim();
-    e.target.classList.toggle("is-invalid", !!v && !/^https:\/\/\S+\.\S+/.test(v));
+    const platform = { tiktokUrl: "tiktok", instagramUrl: "instagram" }[e.target.name];
+    if (platform) checkSocialField(form, platform);
   });
 }
 
