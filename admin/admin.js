@@ -72,6 +72,36 @@ const loader = (() => {
   maxTimer = setTimeout(done, MAX_MS);
   return { status, show, done };
 })();
+
+/* ---------- Eigenes Bestätigungsfenster: gleich auf allen Geräten, sicherer Knopf vorausgewählt ---------- */
+const confirmDlg = document.getElementById("ad-confirm");
+let confirmResolve = null;
+
+function finishConfirm(value) {
+  const resolve = confirmResolve;
+  confirmResolve = null;
+  if (confirmDlg.open) confirmDlg.close();
+  if (resolve) resolve(value);
+}
+
+/** @returns {Promise<boolean>} true = bestätigt */
+function askConfirm({ title, text, yes = "OK", no = "Abbrechen", danger = false, symbol = "triangle-alert" }) {
+  if (confirmResolve) finishConfirm(false);
+  document.getElementById("ad-confirm-title").textContent = title;
+  document.getElementById("ad-confirm-text").textContent = text;
+  document.getElementById("ad-confirm-yes").textContent = yes;
+  document.getElementById("ad-confirm-no").textContent = no;
+  document.getElementById("ad-confirm-icon").innerHTML = icon(symbol);
+  confirmDlg.classList.toggle("is-danger", danger);
+  confirmDlg.showModal();
+  document.getElementById("ad-confirm-no").focus(); // sicherer Knopf zuerst
+  return new Promise((resolve) => { confirmResolve = resolve; });
+}
+
+document.getElementById("ad-confirm-yes").addEventListener("click", () => finishConfirm(true));
+document.getElementById("ad-confirm-no").addEventListener("click", () => finishConfirm(false));
+confirmDlg.addEventListener("cancel", (e) => { e.preventDefault(); finishConfirm(false); });
+confirmDlg.addEventListener("click", (e) => { if (e.target === confirmDlg) finishConfirm(false); });
 let map = null;
 
 /* =========================================================
@@ -182,7 +212,7 @@ function initAuth() {
   });
 
   $("#ad-logout").addEventListener("click", async () => {
-    if (state.dirty && !confirm("Es gibt nicht veröffentlichte Änderungen. Trotzdem abmelden?")) return;
+    if (state.dirty && !(await askConfirm({ title: "Trotzdem abmelden?", text: "Es gibt Änderungen, die noch nicht veröffentlicht sind. Beim Abmelden gehen sie verloren.", yes: "Abmelden", no: "Zurück", danger: true }))) return;
     setDirty(false);
     const { a, auth } = await loadAuth();
     await a.signOut(auth);
@@ -379,7 +409,7 @@ function moveItem(arr, i, dir) {
 }
 
 function onListClick(listSel, key, renderFn, openFn) {
-  $(listSel).addEventListener("click", (e) => {
+  $(listSel).addEventListener("click", async (e) => {
     const b = e.target.closest("[data-act]");
     if (!b) return;
     const id = b.closest("[data-id]").dataset.id;
@@ -389,9 +419,16 @@ function onListClick(listSel, key, renderFn, openFn) {
     const act = b.dataset.act;
     if (act === "edit") return openFn(arr[i]);
     if (act === "delete") {
-      if (!confirm(`„${arr[i].name}“ wirklich löschen? (Wird erst mit „Veröffentlichen“ wirksam.)`)) return;
-      const wasFeatured = arr[i].featured;
-      arr.splice(i, 1);
+      const what = key === "projects" ? "Projekt" : "Land";
+      const ok = await askConfirm({
+        title: `${what} „${arr[i].name}“ löschen?`,
+        text: `Der komplette Eintrag inklusive ${key === "projects" ? "Projekttext" : "Bericht und Quellen"} wird entfernt. Auf der Website verschwindet er nach dem Veröffentlichen.`,
+        yes: "Löschen", no: "Behalten", danger: true, symbol: "trash-2"
+      });
+      const j = arr.findIndex((x) => x.id === id); // Liste kann sich inzwischen geändert haben
+      if (!ok || j < 0) return;
+      const wasFeatured = arr[j].featured;
+      arr.splice(j, 1);
       if (wasFeatured && arr[0]) arr[0].featured = true;
     }
     if (act === "up") moveItem(arr, i, -1);
@@ -407,6 +444,8 @@ function onListClick(listSel, key, renderFn, openFn) {
 const dialog = $("#ad-dialog");
 let dialogSubmit = null;
 let dialogCtl = new AbortController();
+let dialogDirty = false;
+const markDialogDirty = () => { if (dialog.open) dialogDirty = true; };
 
 /** Listener, die nur für die aktuelle Dialog-Öffnung gelten, bekommen dieses Signal. */
 const dialogSignal = () => dialogCtl.signal;
@@ -414,6 +453,7 @@ const dialogSignal = () => dialogCtl.signal;
 function openDialog(title, bodyHtml, onSubmit) {
   dialogCtl.abort();
   dialogCtl = new AbortController();
+  dialogDirty = false;
   $("#ad-dialog-title").textContent = title;
   $("#ad-dialog-body").innerHTML = bodyHtml;
   dialogSubmit = onSubmit;
@@ -421,24 +461,42 @@ function openDialog(title, bodyHtml, onSubmit) {
   $("#ad-dialog-body").scrollTop = 0;
 }
 
-function closeDialog() {
-  if (state.uploads > 0 && !confirm("Ein Bild wird noch hochgeladen. Trotzdem schließen?")) return;
+/** Schließen mit Sicherheitsabfrage, wenn etwas geändert wurde (Abbrechen, X, Escape, Klick daneben). */
+async function closeDialog() {
+  if (!dialog.open) return;
+  if (state.uploads > 0) {
+    const ok = await askConfirm({ title: "Bild wird noch hochgeladen", text: "Wenn du jetzt schließt, wird das Bild nicht übernommen.", yes: "Trotzdem schließen", no: "Warten", symbol: "upload" });
+    if (!ok) return;
+  } else if (dialogDirty) {
+    const ok = await askConfirm({
+      title: "Änderungen verwerfen?",
+      text: "Du hast in diesem Fenster etwas geändert. Wenn du jetzt schließt, gehen diese Eingaben verloren.",
+      yes: "Verwerfen", no: "Weiter bearbeiten", danger: true
+    });
+    if (!ok) return;
+  }
+  dialogDirty = false;
   dialog.close();
 }
 
 $("#ad-dialog-form").addEventListener("submit", (e) => {
   e.preventDefault();
   if (state.uploads > 0) { toast("Bitte warten, bis das Bild hochgeladen ist."); return; }
-  if (dialogSubmit && dialogSubmit() !== false) dialog.close();
+  if (dialogSubmit && dialogSubmit() !== false) { dialogDirty = false; dialog.close(); }
 });
+// Jede Eingabe im Editor zählt als Änderung
+$("#ad-dialog-form").addEventListener("input", markDialogDirty);
+$("#ad-dialog-form").addEventListener("change", markDialogDirty);
 dialog.addEventListener("click", (e) => {
   if (e.target.closest("[data-close]")) closeDialog();
   else if (e.target === dialog) closeDialog(); // Klick auf den abgedunkelten Rand
 });
 dialog.addEventListener("close", () => dialogCtl.abort());
-dialog.addEventListener("cancel", (e) => { // Escape
-  if (state.uploads > 0) { e.preventDefault(); toast("Bitte warten, bis das Bild hochgeladen ist."); }
+// Escape schon beim Drücken abfangen: Chrome würde sonst bei zweimal Escape trotz Abfrage schließen
+dialog.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { e.preventDefault(); closeDialog(); }
 });
+dialog.addEventListener("cancel", (e) => { e.preventDefault(); closeDialog(); });
 
 /* ---------- Land bearbeiten ---------- */
 function statFields(st, i) {
@@ -556,6 +614,7 @@ function openCountryEditor(existing) {
   }
   c.report.sources.forEach(addSourceRow);
   addSourceBtn.addEventListener("click", () => {
+    markDialogDirty();
     addSourceRow();
     sourcesEl.lastElementChild.querySelector("input").focus();
   });
@@ -563,6 +622,7 @@ function openCountryEditor(existing) {
     const b = e.target.closest("[data-src-remove]");
     if (!b) return;
     b.closest(".ad-source").remove();
+    markDialogDirty();
     addSourceBtn.hidden = sourcesEl.children.length >= MAX_SOURCES;
   });
   sourcesEl.addEventListener("input", (e) => e.target.classList.remove("is-invalid"));
@@ -570,12 +630,13 @@ function openCountryEditor(existing) {
   const flagField = imageField($("#ad-img-flag"), {
     label: "Flagge (wird automatisch gesetzt, eigene optional)", value: c.flagUrl, maxSize: 256, ratio: "square",
     onChange: (url) => {
+      markDialogDirty();
       c.flagCustom = !!url;
       c.flagUrl = url || flagUrlFor(c.flagCode);
       flagField.set(c.flagUrl);
     }
   });
-  imageField($("#ad-img-cover"), { label: "Titelbild der Karte", value: c.coverUrl, maxSize: 1600, onChange: (url) => { c.coverUrl = url; } });
+  imageField($("#ad-img-cover"), { label: "Titelbild der Karte", value: c.coverUrl, maxSize: 1600, onChange: (url) => { markDialogDirty(); c.coverUrl = url; } });
 
   function applyCountry(entry) {
     c.isoNumeric = entry.k;
@@ -608,6 +669,7 @@ function openCountryEditor(existing) {
     const entry = byKey.get(b.dataset.pick);
     if (!entry) return;
     form.cname.value = entry.n;
+    markDialogDirty();
     applyCountry(entry);
   });
   form.cname.addEventListener("input", checkName);
@@ -699,7 +761,7 @@ function openProjectEditor(existing) {
     setDirty(true);
     return true;
   });
-  imageField($("#ad-img-thumb"), { label: "Vorschaubild", value: p.thumbnailUrl, maxSize: 1600, onChange: (url) => { p.thumbnailUrl = url; } });
+  imageField($("#ad-img-thumb"), { label: "Vorschaubild", value: p.thumbnailUrl, maxSize: 1600, onChange: (url) => { markDialogDirty(); p.thumbnailUrl = url; } });
   $("#ad-dialog-form").pname.focus();
 }
 
@@ -759,13 +821,27 @@ function initSettings() {
 
 /* =========================================================
    Team (nur im Admin sichtbar, eigenes gesperrtes Dokument)
-   Mitglieder: [{ name, photoUrl }]. Alte reine Namenslisten werden automatisch übernommen.
+   Mitglied: { name, photoUrl, phone, email, zip, address, bio }
+   Karte antippen → Steckbrief (Ansicht). Bearbeiten nur über den Stift.
    ========================================================= */
-const team = { members: [], state: "loading", error: "", saving: false, uploading: undefined };
+const team = { members: [], state: "loading", error: "", saving: false };
+const MEMBER_LIMITS = { name: 60, phone: 25, email: 120, zip: 10, address: 160, bio: 3000 };
+const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PHONE_OK = /^\+?[0-9 ()\/-]{6,25}$/;
+const ZIP_OK = /^\d{4,5}$/;
 
+const str = (v, max) => String(v ?? "").trim().slice(0, max);
 const normMember = (m) => (typeof m === "string"
-  ? { name: m.trim().slice(0, 60), photoUrl: "" }
-  : { name: String(m?.name ?? "").trim().slice(0, 60), photoUrl: URL_OK.test(String(m?.photoUrl ?? "")) ? m.photoUrl : "" });
+  ? { name: str(m, 60), photoUrl: "", phone: "", email: "", zip: "", address: "", bio: "" }
+  : {
+    name: str(m?.name, MEMBER_LIMITS.name),
+    photoUrl: URL_OK.test(String(m?.photoUrl ?? "")) ? m.photoUrl : "",
+    phone: str(m?.phone, MEMBER_LIMITS.phone),
+    email: str(m?.email, MEMBER_LIMITS.email),
+    zip: str(m?.zip, MEMBER_LIMITS.zip),
+    address: str(m?.address, MEMBER_LIMITS.address),
+    bio: String(m?.bio ?? "").slice(0, MEMBER_LIMITS.bio)
+  });
 
 function teamErrorHtml(err) {
   const code = err?.code ?? "";
@@ -776,12 +852,15 @@ function teamErrorHtml(err) {
   return `<strong>Team konnte nicht geladen werden.</strong><span>${esc(errorText(err))}</span>`;
 }
 
+const avatar = (m, size) => (m.photoUrl
+  ? imgTag(m.photoUrl, 'alt=""', size)
+  : `<span class="ad-member__initial" aria-hidden="true">${esc((m.name || "?").charAt(0).toUpperCase())}</span>`);
+
 function renderTeam() {
   const list = $("#ad-team-list");
-  const form = $("#ad-team-form");
-  const errEl = $("#ad-team-error");
   const ready = team.state === "ready";
-  form.querySelector("fieldset").disabled = !ready || team.saving;
+  $("#ad-team-form").querySelector("fieldset").disabled = !ready || team.saving;
+  const errEl = $("#ad-team-error");
   errEl.hidden = team.state !== "error";
   errEl.innerHTML = team.state === "error" ? team.error : "";
   $("#ad-team-import").hidden = !ready || team.members.length > 0;
@@ -791,21 +870,15 @@ function renderTeam() {
   if (team.state === "error") { list.innerHTML = ""; return; }
   list.innerHTML = team.members.length ? team.members.map((m, i) => `
     <li class="ad-member" data-index="${i}">
-      <button type="button" class="ad-member__photo" data-team-photo aria-label="Foto für ${esc(m.name)} ${m.photoUrl ? "ändern" : "hinzufügen"}">
-        ${m.photoUrl ? imgTag(m.photoUrl, 'alt=""', 192) : `<span class="ad-member__initial" aria-hidden="true">${esc(m.name.charAt(0).toUpperCase())}</span>`}
-        <span class="ad-member__cam" aria-hidden="true">${icon("upload")}</span>
-        ${team.uploading === i ? `<span class="ad-member__busy" aria-hidden="true"></span>` : ""}
+      <button type="button" class="ad-member__open" data-team-open aria-label="Steckbrief von ${esc(m.name)} öffnen">
+        <span class="ad-member__photo">${avatar(m, 192)}</span>
+        <span class="ad-member__text">
+          <strong>${esc(m.name)}</strong>
+          <span>${esc(m.email || m.phone || "Steckbrief öffnen")}</span>
+        </span>
+        ${icon("arrow-right", "ad-member__chev")}
       </button>
-      <span class="ad-member__text">
-        <strong>${esc(m.name)}</strong>
-        <span>${m.photoUrl ? "HumanityBridge-Team" : "Tippe auf den Kreis für ein Foto"}</span>
-      </span>
-      <span class="ad-member__actions">
-        <button class="hb-iconbtn" type="button" data-team-rename aria-label="${esc(m.name)} umbenennen">${icon("pencil")}</button>
-        ${m.photoUrl ? `<button class="hb-iconbtn" type="button" data-team-unphoto aria-label="Foto von ${esc(m.name)} entfernen">${icon("eye-off")}</button>` : ""}
-        <button class="hb-iconbtn ad-danger" type="button" data-team-remove aria-label="${esc(m.name)} entfernen">${icon("trash-2")}</button>
-      </span>
-      <input type="file" accept="image/*" hidden data-team-file>
+      <button class="hb-iconbtn ad-danger ad-member__remove" type="button" data-team-remove aria-label="${esc(m.name)} aus dem Team entfernen">${icon("trash-2")}</button>
     </li>`).join("")
     : `<li class="ad-empty">Noch niemand eingetragen.</li>`;
 }
@@ -818,7 +891,7 @@ async function saveTeam(next, message) {
     const { f, db } = await loadFirestore();
     await f.setDoc(f.doc(db, ...TEAM_DOC), { members: next, updatedAt: f.serverTimestamp() });
     team.members = next;
-    toast(message);
+    if (message) toast(message);
     return true;
   } catch (err) {
     console.error(err);
@@ -848,6 +921,236 @@ async function loadTeam() {
   renderTeam();
 }
 
+async function removeMember(i) {
+  const m = team.members[i];
+  if (!m) return false;
+  const ok = await askConfirm({
+    title: `${m.name} entfernen?`,
+    text: "Die Person und ihr kompletter Steckbrief (Kontaktdaten, Foto, Notizen) werden gelöscht. Das lässt sich nicht rückgängig machen.",
+    yes: "Entfernen", no: "Behalten", danger: true, symbol: "trash-2"
+  });
+  if (!ok) return false;
+  const j = team.members.indexOf(m); // Liste kann sich inzwischen geändert haben
+  if (j < 0) return false;
+  return saveTeam(team.members.filter((_, k) => k !== j), `${m.name} entfernt.`);
+}
+
+/* ---------- Steckbrief ---------- */
+const profileDlg = document.getElementById("ad-profile");
+const profile = { index: -1, mode: "view", draft: null, dirty: false, uploading: false };
+
+function factRow(symbol, label, value, href) {
+  const content = value
+    ? (href ? `<a href="${esc(href)}">${esc(value)}</a>` : `<span>${esc(value)}</span>`)
+    : `<span class="ad-profile__none">nicht eingetragen</span>`;
+  return `<div class="ad-profile__fact">${icon(symbol)}<dt>${label}</dt><dd>${content}</dd></div>`;
+}
+
+function renderProfileView() {
+  const m = team.members[profile.index];
+  if (!m) { profileDlg.close(); return; }
+  const tel = m.phone ? `tel:${m.phone.replace(/[^\d+]/g, "")}` : "";
+  $("#ad-profile-body").innerHTML = `
+    <header class="ad-profile__head">
+      <span class="ad-profile__photo">${avatar(m, 256)}</span>
+      <div class="ad-profile__name">
+        <p class="ad-profile__kicker">${icon("file-text")}Steckbrief</p>
+        <h2 id="ad-profile-title">${esc(m.name)}</h2>
+      </div>
+      <div class="ad-profile__tools">
+        <button class="hb-iconbtn" type="button" data-prof-edit aria-label="Steckbrief bearbeiten" title="Bearbeiten">${icon("pencil")}</button>
+        <button class="hb-iconbtn" type="button" data-prof-close aria-label="Schließen" title="Schließen">${icon("x")}</button>
+      </div>
+    </header>
+    <dl class="ad-profile__facts">
+      ${factRow("phone", "Telefon", m.phone, tel)}
+      ${factRow("mail", "E-Mail", m.email, m.email ? `mailto:${m.email}` : "")}
+      ${factRow("map-pin", "PLZ", m.zip)}
+      ${factRow("map", "Anschrift", m.address)}
+    </dl>
+    <section class="ad-profile__bio" aria-labelledby="ad-profile-bio-h">
+      <h3 id="ad-profile-bio-h">Über ${esc(m.name.split(" ")[0])}</h3>
+      ${m.bio ? `<p class="ad-profile__biotext">${esc(m.bio)}</p>`
+        : `<p class="ad-profile__none">Noch nichts eingetragen. Über den Stift oben rechts kannst du hier alles notieren: Aufgaben, Erreichbarkeit, Ideen …</p>`}
+    </section>`;
+}
+
+function editField(name, label, type, value, extra = "") {
+  return `<label class="ad-field"><span>${label}</span>
+    <input type="${type}" name="${name}" value="${esc(value)}" maxlength="${MEMBER_LIMITS[name]}" ${extra}>
+    <small class="ad-field__err" data-err="${name}" hidden></small></label>`;
+}
+
+function renderProfilePhoto() {
+  const el = $("#ad-prof-photo");
+  if (!el) return;
+  const d = profile.draft;
+  el.innerHTML = `
+    <span class="ad-profile__photo">${avatar(d, 256)}${profile.uploading ? `<span class="ad-member__busy" aria-hidden="true"></span>` : ""}</span>
+    <div class="ad-profile__photoactions">
+      <button type="button" class="hb-btn ad-btn-ghost hb-btn--sm" data-prof-photo ${profile.uploading ? "disabled" : ""}>${icon("camera")}<span>${profile.uploading ? "Lädt hoch …" : d.photoUrl ? "Foto ändern" : "Foto hinzufügen"}</span></button>
+      ${d.photoUrl && !profile.uploading ? `<button type="button" class="hb-btn ad-btn-ghost hb-btn--sm" data-prof-unphoto>${icon("trash-2")}<span>Foto entfernen</span></button>` : ""}
+      <input type="file" accept="image/*" hidden data-prof-file>
+    </div>`;
+}
+
+function renderProfileEdit() {
+  const d = profile.draft;
+  $("#ad-profile-body").innerHTML = `
+    <form class="ad-profile__form" id="ad-profile-form" novalidate>
+      <header class="ad-profile__head ad-profile__head--edit">
+        <div class="ad-profile__name">
+          <p class="ad-profile__kicker">${icon("pencil")}Steckbrief bearbeiten</p>
+          <h2 id="ad-profile-title">${esc(team.members[profile.index]?.name ?? "")}</h2>
+        </div>
+        <div class="ad-profile__tools">
+          <button class="hb-iconbtn" type="button" data-prof-close aria-label="Schließen" title="Schließen">${icon("x")}</button>
+        </div>
+      </header>
+      <div class="ad-profile__editbody">
+        <div class="ad-profile__photorow" id="ad-prof-photo"></div>
+        ${editField("name", "Name", "text", d.name, 'autocomplete="off" required')}
+        <div class="ad-grid2">
+          ${editField("phone", "Telefon", "tel", d.phone, 'inputmode="tel" autocomplete="off" placeholder="+49 …"')}
+          ${editField("email", "E-Mail", "email", d.email, 'inputmode="email" autocomplete="off" placeholder="name@…"')}
+          ${editField("zip", "PLZ", "text", d.zip, 'inputmode="numeric" autocomplete="off" placeholder="z. B. 80331"')}
+          ${editField("address", "Anschrift", "text", d.address, 'autocomplete="off" placeholder="Straße Hausnummer, Ort"')}
+        </div>
+        <label class="ad-field"><span>Steckbrief (frei, z. B. Aufgaben, Erreichbarkeit, Notizen)</span>
+          <textarea name="bio" rows="7" maxlength="${MEMBER_LIMITS.bio}">${esc(d.bio)}</textarea></label>
+      </div>
+      <footer class="ad-profile__foot">
+        <button class="hb-btn ad-btn-ghost" type="button" data-prof-cancel>Abbrechen</button>
+        <button class="hb-btn hb-btn--dark" type="submit">${icon("check")}<span>Speichern</span></button>
+      </footer>
+    </form>`;
+  renderProfilePhoto();
+}
+
+function openProfile(i) {
+  profile.index = i;
+  profile.mode = "view";
+  profile.draft = null;
+  profile.dirty = false;
+  renderProfileView();
+  if (!profileDlg.open) profileDlg.showModal();
+  profileDlg.querySelector("[data-prof-edit]")?.focus();
+}
+
+function startEdit() {
+  profile.mode = "edit";
+  profile.draft = { ...team.members[profile.index] };
+  profile.dirty = false;
+  renderProfileEdit();
+  $("#ad-profile-form").elements.namedItem("name").focus();
+}
+
+/** Bearbeiten verlassen. close=true schließt ganz, sonst zurück zur Ansicht. Fragt bei Änderungen nach. */
+async function leaveEdit(close) {
+  if (profile.uploading) {
+    const ok = await askConfirm({ title: "Foto wird noch hochgeladen", text: "Wenn du jetzt abbrichst, wird das Foto nicht übernommen.", yes: "Trotzdem abbrechen", no: "Warten", symbol: "upload" });
+    if (!ok) return;
+  } else if (profile.dirty) {
+    const ok = await askConfirm({
+      title: "Änderungen verwerfen?",
+      text: "Deine Eingaben im Steckbrief wurden noch nicht gespeichert und gehen verloren.",
+      yes: "Verwerfen", no: "Weiter bearbeiten", danger: true
+    });
+    if (!ok) return;
+  }
+  profile.dirty = false;
+  profile.uploading = false;
+  if (close) { profileDlg.close(); return; }
+  profile.mode = "view";
+  renderProfileView();
+  profileDlg.querySelector("[data-prof-edit]")?.focus();
+}
+
+function requestProfileClose() {
+  if (profile.mode === "edit") leaveEdit(true);
+  else profileDlg.close();
+}
+
+async function saveProfile() {
+  const form = $("#ad-profile-form");
+  const d = profile.draft;
+  const errors = {};
+  if (!d.name) errors.name = "Bitte einen Namen eintragen.";
+  else if (team.members.some((x, k) => k !== profile.index && x.name.toLowerCase() === d.name.toLowerCase())) errors.name = "Diesen Namen gibt es schon im Team.";
+  if (d.phone && !(PHONE_OK.test(d.phone) && d.phone.replace(/\D/g, "").length >= 6)) errors.phone = "Bitte eine gültige Telefonnummer eintragen.";
+  if (d.email && !EMAIL_OK.test(d.email)) errors.email = "Bitte eine gültige E-Mail-Adresse eintragen.";
+  if (d.zip && !ZIP_OK.test(d.zip)) errors.zip = "PLZ aus 4 oder 5 Ziffern.";
+  form.querySelectorAll("[data-err]").forEach((el) => {
+    const msg = errors[el.dataset.err];
+    el.hidden = !msg;
+    el.textContent = msg || "";
+    const input = form.elements.namedItem(el.dataset.err);
+    input.classList.toggle("is-invalid", !!msg);
+    input.setAttribute("aria-invalid", msg ? "true" : "false");
+  });
+  const first = Object.keys(errors)[0];
+  if (first) { form.elements.namedItem(first).focus(); return; }
+  if (profile.uploading) { toast("Bitte warten, bis das Foto hochgeladen ist."); return; }
+
+  const i = profile.index;
+  const next = team.members.map((x, k) => (k === i ? normMember(d) : x));
+  if (await saveTeam(next, "Steckbrief gespeichert.")) {
+    profile.dirty = false;
+    profile.mode = "view";
+    if (profileDlg.open) { renderProfileView(); profileDlg.querySelector("[data-prof-edit]")?.focus(); }
+  }
+}
+
+function initProfile() {
+  profileDlg.addEventListener("click", (e) => {
+    if (e.target === profileDlg) { requestProfileClose(); return; } // Klick auf den dunklen Rand
+    if (e.target.closest("[data-prof-close]")) requestProfileClose();
+    else if (e.target.closest("[data-prof-edit]")) startEdit();
+    else if (e.target.closest("[data-prof-cancel]")) leaveEdit(false);
+    else if (e.target.closest("[data-prof-photo]")) profileDlg.querySelector("[data-prof-file]")?.click();
+    else if (e.target.closest("[data-prof-unphoto]")) { profile.draft.photoUrl = ""; profile.dirty = true; renderProfilePhoto(); }
+  });
+  profileDlg.addEventListener("input", (e) => {
+    const el = e.target;
+    if (profile.mode !== "edit" || !el.name || !(el.name in MEMBER_LIMITS)) return;
+    profile.draft[el.name] = el.name === "bio" ? el.value : el.value.replace(/\s+/g, " ").trimStart();
+    profile.dirty = true;
+    const err = profileDlg.querySelector(`[data-err="${el.name}"]`);
+    if (err) { err.hidden = true; el.classList.remove("is-invalid"); el.setAttribute("aria-invalid", "false"); }
+  });
+  profileDlg.addEventListener("change", async (e) => {
+    const input = e.target.closest("[data-prof-file]");
+    if (!input?.files?.[0]) return;
+    profile.uploading = true;
+    renderProfilePhoto();
+    try {
+      const url = await processAndUpload(input.files[0], 400);
+      if (profile.mode === "edit" && profile.uploading) { profile.draft.photoUrl = url; profile.dirty = true; }
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Foto konnte nicht hochgeladen werden.");
+    } finally {
+      profile.uploading = false;
+      renderProfilePhoto();
+    }
+  });
+  profileDlg.addEventListener("submit", (e) => {
+    if (e.target.id !== "ad-profile-form") return;
+    e.preventDefault();
+    // Namen säubern, bevor geprüft wird
+    profile.draft.name = profile.draft.name.trim();
+    saveProfile();
+  });
+  // Escape: in der Ansicht schließen, beim Bearbeiten erst nachfragen (schon beim Tastendruck abfangen)
+  profileDlg.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    if (profile.mode === "edit") leaveEdit(false);
+    else profileDlg.close();
+  });
+  profileDlg.addEventListener("cancel", (e) => { e.preventDefault(); requestProfileClose(); });
+}
+
 function initTeam() {
   const form = $("#ad-team-form");
   form.addEventListener("submit", async (e) => {
@@ -857,55 +1160,22 @@ function initTeam() {
     if (!name) { toast("Bitte einen Namen eintragen."); form.member.focus(); return; }
     if (team.members.some((m) => m.name.toLowerCase() === name.toLowerCase())) { toast(`${name} ist schon im Team.`); return; }
     if (team.members.length >= 50) { toast("Maximal 50 Mitglieder."); return; }
-    if (await saveTeam([...team.members, { name, photoUrl: "" }], `${name} hinzugefügt.`)) form.member.value = "";
+    if (await saveTeam([...team.members, normMember({ name })], `${name} hinzugefügt.`)) form.member.value = "";
     form.member.focus();
   });
 
-  const list = $("#ad-team-list");
-  list.addEventListener("click", async (e) => {
+  $("#ad-team-list").addEventListener("click", async (e) => {
     const item = e.target.closest("[data-index]");
     if (!item || team.saving) return;
     const i = Number(item.dataset.index);
-    const m = team.members[i];
-    if (e.target.closest("[data-team-photo]")) {
-      if (team.uploading === undefined) item.querySelector("[data-team-file]").click();
-      return;
-    }
-    if (e.target.closest("[data-team-remove]")) {
-      if (!confirm(`${m.name} aus dem Team entfernen?`)) return;
-      await saveTeam(team.members.filter((_, k) => k !== i), `${m.name} entfernt.`);
-    } else if (e.target.closest("[data-team-unphoto]")) {
-      await saveTeam(team.members.map((x, k) => (k === i ? { ...x, photoUrl: "" } : x)), "Foto entfernt.");
-    } else if (e.target.closest("[data-team-rename]")) {
-      const next = (prompt("Neuer Name:", m.name) ?? "").trim().replace(/\s+/g, " ").slice(0, 60);
-      if (!next || next === m.name) return;
-      if (team.members.some((x, k) => k !== i && x.name.toLowerCase() === next.toLowerCase())) { toast(`${next} ist schon im Team.`); return; }
-      await saveTeam(team.members.map((x, k) => (k === i ? { ...x, name: next } : x)), "Name geändert.");
-    }
-  });
-
-  list.addEventListener("change", async (e) => {
-    const input = e.target.closest("[data-team-file]");
-    if (!input?.files?.[0]) return;
-    const i = Number(input.closest("[data-index]").dataset.index);
-    const name = team.members[i].name;
-    team.uploading = i;
-    renderTeam();
-    try {
-      const url = await processAndUpload(input.files[0], 400);
-      team.uploading = undefined;
-      await saveTeam(team.members.map((x, k) => (k === i ? { ...x, photoUrl: url } : x)), `Foto für ${name} gespeichert.`);
-    } catch (err) {
-      console.error(err);
-      alert(err.message || "Foto konnte nicht hochgeladen werden.");
-    } finally {
-      team.uploading = undefined;
-      renderTeam();
-    }
+    if (e.target.closest("[data-team-remove]")) await removeMember(i);
+    else if (e.target.closest("[data-team-open]")) openProfile(i);
   });
 
   $("#ad-team-import").addEventListener("click", () =>
-    saveTeam(IMPRESSUM_TEAM.map((name) => ({ name, photoUrl: "" })), "Team aus dem Impressum übernommen."));
+    saveTeam(IMPRESSUM_TEAM.map((name) => normMember({ name })), "Team aus dem Impressum übernommen."));
+
+  initProfile();
 }
 
 /* =========================================================
