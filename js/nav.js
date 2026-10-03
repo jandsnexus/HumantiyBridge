@@ -80,7 +80,7 @@ export function initSearch(getData, { onCountry, onProject }) {
       ? rows.map((r) => `
         <li role="option">
           <button type="button" data-type="${r.type}" data-id="${esc(r.id)}">
-            ${imgTag(r.img, 'class="hb-flag" alt="" width="24" height="24"') || `<span class="hb-flag hb-flag--icon">${icon(r.type === "project" ? "box" : "globe")}</span>`}
+            ${imgTag(r.img, 'class="hb-flag" alt="" width="24" height="24"', 64) || `<span class="hb-flag hb-flag--icon">${icon(r.type === "project" ? "box" : "globe")}</span>`}
             <span>${esc(r.label)}</span>
           </button>
         </li>`).join("")
