@@ -86,7 +86,7 @@
 
 .ad-banner {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
-  max-width: 1100px; margin: 16px auto 0; padding: 12px 16px; border-radius: var(--radius);
+  margin: 0; padding: 12px 16px; border-radius: var(--radius);
   background: #2a2210; border: 1px solid #6b5418; color: #fde7a8; font-size: 14px;
 }
 
