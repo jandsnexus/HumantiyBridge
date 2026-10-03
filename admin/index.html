@@ -3,196 +3,156 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>HumanityBridge – Hoffnung in Kriegsgebieten</title>
-  <meta name="description" content="HumanityBridge verbindet Menschen, die helfen wollen, mit Menschen in Kriegs- und Krisengebieten.">
-  <meta name="theme-color" content="#ffffff">
-  <!-- App-Icon für "Zum Home-Bildschirm" (iPhone/iPad/Android) und Browser-Tabs -->
-  <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg">
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
-  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="apple-mobile-web-app-title" content="HumanityBridge">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="robots" content="noindex, nofollow">
+  <title>HumanityBridge – Admin</title>
+  <meta name="theme-color" content="#0b1424">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" type="image/svg+xml" href="../assets/img/logo-light.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/img/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/img/admin-apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="HB Admin">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-  <link rel="stylesheet" href="css/styles.css">
-  <script>
-    /* Ladescreen nur einmal pro Session: Flag vor dem ersten Paint setzen, sonst blitzt er auf. */
-    try { if (sessionStorage.getItem("hb-loader-seen")) document.documentElement.classList.add("hb-skip-loader"); } catch (e) {}
-  </script>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="admin.css">
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="admin.js"></script>
 </head>
-<body>
-  <a class="hb-skip" href="#inhalt">Zum Inhalt springen</a>
+<body class="ad-body">
 
-  <!-- Ladescreen: blockiert nie, Tippen überspringt, CSS-Fallback blendet ohne JS aus -->
-  <div class="hb-loader" id="hb-loader" aria-hidden="true">
-    <div class="hb-loader__inner">
-      <img class="hb-loader__logo" src="assets/img/logo.svg" alt="" width="132" height="138">
-      <span class="hb-loader__name">HumanityBridge</span>
-      <span class="hb-loader__bar"><span></span></span>
-    </div>
-  </div>
+  <!-- Anmeldung -->
+  <main class="ad-login" id="ad-login">
+    <form class="ad-login__card" id="ad-login-form" novalidate>
+      <img src="../assets/img/logo-light.svg" alt="" width="64" height="67">
+      <h1>Admin-Bereich</h1>
+      <p class="ad-muted">Mit eurem gemeinsamen Team-Account anmelden.</p>
+      <label class="ad-field">
+        <span>E-Mail</span>
+        <input type="email" name="email" autocomplete="username" required>
+      </label>
+      <label class="ad-field">
+        <span>Passwort</span>
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <p class="ad-error" id="ad-login-error" role="alert" hidden></p>
+      <button class="hb-btn hb-btn--dark ad-btn-block" type="submit">Anmelden</button>
+      <a class="ad-link" href="../">Zur Website</a>
+    </form>
+  </main>
 
-  <header class="hb-header">
-    <a class="hb-brand" href="#start" aria-label="HumanityBridge Startseite">
-      <img class="hb-brand__logo" src="assets/img/logo.svg" alt="" width="40" height="42">
-      <span class="hb-brand__name">HumanityBridge</span>
-    </a>
-
-    <nav class="hb-topnav" aria-label="Hauptnavigation">
-      <a href="#start" data-nav="start">Startseite</a>
-      <a href="#laender" data-nav="laender">Länder</a>
-      <a href="#projekte" data-nav="projekte">Projekte</a>
-      <a href="#ueber-uns" data-nav="ueber-uns">Über uns</a>
-      <a href="#kontakt" data-nav="kontakt">Kontakt</a>
-    </nav>
-
-    <div class="hb-header__actions">
-      <div class="hb-search" id="hb-search">
-        <button class="hb-iconbtn" id="hb-search-toggle" type="button" aria-label="Suche öffnen" aria-expanded="false" aria-controls="hb-search-panel" data-icon="search"></button>
-        <div class="hb-search__panel" id="hb-search-panel" hidden>
-          <label class="hb-visually-hidden" for="hb-search-input">Länder und Projekte suchen</label>
-          <input id="hb-search-input" type="search" placeholder="Land oder Projekt suchen" autocomplete="off">
-          <ul class="hb-search__results" id="hb-search-results" role="listbox" aria-label="Suchergebnisse"></ul>
-        </div>
+  <!-- Dashboard -->
+  <div class="ad-app" id="ad-app" hidden>
+    <header class="ad-header">
+      <a class="hb-brand" href="../" title="Zur Website">
+        <img class="hb-brand__logo" src="../assets/img/logo-light.svg" alt="" width="34" height="36">
+        <span class="hb-brand__name">Admin</span>
+      </a>
+      <nav class="ad-tabs" role="tablist" aria-label="Bereiche">
+        <button type="button" role="tab" class="ad-tab" data-tab="countries" aria-selected="true">Länder</button>
+        <button type="button" role="tab" class="ad-tab" data-tab="projects" aria-selected="false">Projekte</button>
+        <button type="button" role="tab" class="ad-tab" data-tab="settings" aria-selected="false">Startseite</button>
+        <button type="button" role="tab" class="ad-tab" data-tab="team" aria-selected="false">Team</button>
+      </nav>
+      <div class="ad-header__actions">
+        <a class="hb-iconbtn" href="../" target="_blank" rel="noopener" aria-label="Website in neuem Tab öffnen" data-icon="external-link"></a>
+        <button class="hb-iconbtn" type="button" id="ad-logout" aria-label="Abmelden" data-icon="log-out"></button>
       </div>
-      <button class="hb-btn hb-btn--dark" type="button" data-donate aria-label="Spenden">
-        <span data-icon="heart"></span><span>Spenden</span>
-      </button>
-    </div>
-  </header>
+    </header>
 
-  <div class="hb-shell">
-    <!-- Seitenmenü: Desktop links, Mobil als Leiste unten (gleiches Element) -->
-    <nav class="hb-sidenav" aria-label="Seitenmenü">
-      <a href="#start" data-nav="start"><span data-icon="house"></span><span>Startseite</span></a>
-      <a href="#laender" data-nav="laender"><span data-icon="globe"></span><span>Länder</span></a>
-      <a href="#projekte" data-nav="projekte"><span data-icon="box"></span><span>Projekte</span></a>
-      <a href="#ueber-uns" data-nav="ueber-uns"><span data-icon="users"></span><span>Über uns</span></a>
-      <a href="#kontakt" data-nav="kontakt"><span data-icon="mail"></span><span>Kontakt</span></a>
-    </nav>
+    <div class="ad-banner" id="ad-banner" hidden></div>
 
-    <main id="inhalt" class="hb-main">
-      <section class="hb-hero" id="start" aria-labelledby="hb-hero-title">
-        <div class="hb-hero__map" id="hb-map" aria-hidden="false"></div>
-        <div class="hb-hero__content">
-          <p class="hb-hero__kicker">Humanitäre Hilfe. Echte Wirkung.</p>
-          <h1 class="hb-hero__title" id="hb-hero-title">
-            <span class="t-white">Hoffnung</span> <span class="t-blue">in</span><br>
-            <span class="t-white">Krieg</span><span class="t-fade">s</span><span class="t-blue">gebieten.</span>
-          </h1>
-          <p class="hb-hero__text">Wir verbinden Menschen, die helfen wollen,<br class="hb-br-desk"> mit Menschen, die es am dringendsten brauchen.<br> Spende heute. Hilf morgen.</p>
-          <div class="hb-hero__actions">
-            <button class="hb-btn hb-btn--light" type="button" data-donate>
-              <span>Jetzt spenden</span><span data-icon="arrow-right"></span>
-            </button>
-            <a class="hb-btn hb-btn--ghost" href="#ueber-uns">Mehr erfahren</a>
+    <main class="ad-main">
+      <section class="ad-panel" id="panel-countries" role="tabpanel">
+        <div class="ad-panel__head">
+          <div>
+            <h2>Krisenländer</h2>
+            <p class="ad-muted">Reihenfolge = Reihenfolge auf der Startseite. Markierte Länder leuchten auf der Karte.</p>
           </div>
+          <button class="hb-btn hb-btn--dark" type="button" id="ad-add-country"><span data-icon="plus"></span><span>Land hinzufügen</span></button>
         </div>
-        <button class="hb-btn hb-btn--ghost hb-btn--sm hb-hero__all" type="button" data-open-countries>
-          <span>Alle Länder anzeigen</span><span data-icon="arrow-right"></span>
-        </button>
+        <div class="ad-map"><div class="hb-hero__map" id="ad-map"></div></div>
+        <ul class="ad-list" id="ad-country-list"></ul>
       </section>
 
-      <aside class="hb-panel hb-follow" aria-labelledby="hb-follow-title">
-        <h2 class="hb-panel__title" id="hb-follow-title">Folge unserer Arbeit</h2>
-        <ul class="hb-follow__list" id="hb-follow-list">
-          <li><div class="hb-follow__item"><span class="hb-skel hb-skel--circle"></span><span class="hb-skel hb-skel--text"></span></div></li>
-          <li><div class="hb-follow__item"><span class="hb-skel hb-skel--circle"></span><span class="hb-skel hb-skel--text"></span></div></li>
-          <li><div class="hb-follow__item"><span class="hb-skel hb-skel--circle"></span><span class="hb-skel hb-skel--text"></span></div></li>
-        </ul>
-      </aside>
-
-      <section class="hb-crisis" id="laender" aria-labelledby="hb-crisis-title">
-        <div class="hb-section-head">
+      <section class="ad-panel" id="panel-projects" role="tabpanel" hidden>
+        <div class="ad-panel__head">
           <div>
-            <h2 class="hb-h2" id="hb-crisis-title">Aktuelle Krisenländer</h2>
-            <p class="hb-sub">Klick auf ein Land, um mehr über die Situation und unsere Projekte zu erfahren.</p>
+            <h2>Projekte</h2>
+            <p class="ad-muted">Das mit Stern markierte Projekt erscheint auf der Startseite.</p>
           </div>
-          <button class="hb-link" type="button" data-open-countries>
-            <span>Alle Länder anzeigen</span><span data-icon="arrow-right"></span>
-          </button>
+          <button class="hb-btn hb-btn--dark" type="button" id="ad-add-project"><span data-icon="plus"></span><span>Projekt hinzufügen</span></button>
         </div>
-        <div class="hb-cards" id="hb-cards" role="list" aria-busy="true">
-          <div class="hb-card hb-card--skel" aria-hidden="true"><span class="hb-skel hb-skel--media"></span><span class="hb-skel hb-skel--text"></span><span class="hb-skel hb-skel--pill"></span></div>
-          <div class="hb-card hb-card--skel" aria-hidden="true"><span class="hb-skel hb-skel--media"></span><span class="hb-skel hb-skel--text"></span><span class="hb-skel hb-skel--pill"></span></div>
-          <div class="hb-card hb-card--skel" aria-hidden="true"><span class="hb-skel hb-skel--media"></span><span class="hb-skel hb-skel--text"></span><span class="hb-skel hb-skel--pill"></span></div>
-          <div class="hb-card hb-card--skel" aria-hidden="true"><span class="hb-skel hb-skel--media"></span><span class="hb-skel hb-skel--text"></span><span class="hb-skel hb-skel--pill"></span></div>
+        <ul class="ad-list" id="ad-project-list"></ul>
+      </section>
+
+      <section class="ad-panel" id="panel-settings" role="tabpanel" hidden>
+        <div class="ad-panel__head"><div><h2>Startseite</h2><p class="ad-muted">Social Media, Bilder und Spenden-Schalter.</p></div></div>
+        <form class="ad-form" id="ad-settings-form" novalidate>
+          <fieldset class="ad-group">
+            <legend>Social Media</legend>
+            <div class="ad-grid2">
+              <label class="ad-field"><span>TikTok-Link</span><input type="url" name="tiktokUrl" placeholder="https://www.tiktok.com/@…" inputmode="url"></label>
+              <label class="ad-field"><span>TikTok-Name</span><input type="text" name="tiktokHandle" placeholder="@humanitybridge" maxlength="40"></label>
+              <label class="ad-field"><span>Instagram-Link</span><input type="url" name="instagramUrl" placeholder="https://www.instagram.com/…" inputmode="url"></label>
+              <label class="ad-field"><span>Instagram-Name</span><input type="text" name="instagramHandle" placeholder="@humanitybridge" maxlength="40"></label>
+            </div>
+          </fieldset>
+          <fieldset class="ad-group">
+            <legend>Zitat unten rechts</legend>
+            <div class="ad-image" data-image="quote"></div>
+          </fieldset>
+          <fieldset class="ad-group">
+            <legend>Karte „Weitere Länder“</legend>
+            <label class="ad-field"><span>Text</span><input type="text" name="moreText" maxlength="120"></label>
+            <div class="ad-image" data-image="more"></div>
+          </fieldset>
+          <fieldset class="ad-group">
+            <legend>Spenden</legend>
+            <label class="ad-switch"><input type="checkbox" name="donationsEnabled"><span>Spenden-Buttons aktivieren</span></label>
+            <p class="ad-muted">Erst einschalten, wenn eine Spendenseite und die rechtlichen Angaben bereit sind.</p>
+          </fieldset>
+        </form>
+      </section>
+
+      <section class="ad-panel" id="panel-team" role="tabpanel" hidden>
+        <div class="ad-panel__head">
+          <div>
+            <h2>Team</h2>
+            <p class="ad-muted">Nur hier im Admin sichtbar, erscheint nirgends auf der Website. Änderungen werden sofort gespeichert.</p>
+          </div>
         </div>
+        <form class="ad-team-form" id="ad-team-form" novalidate>
+          <label class="ad-field"><span>Name</span><input type="text" name="member" maxlength="60" autocomplete="off" placeholder="Vor- und Nachname"></label>
+          <button class="hb-btn hb-btn--dark" type="submit"><span data-icon="plus"></span><span>Hinzufügen</span></button>
+        </form>
+        <ul class="ad-list" id="ad-team-list"></ul>
+        <button class="hb-btn ad-btn-ghost" type="button" id="ad-team-import" hidden><span data-icon="users"></span><span>Namen aus dem Impressum übernehmen</span></button>
       </section>
     </main>
+
+    <div class="ad-publish" id="ad-publish">
+      <p class="ad-publish__status" id="ad-status">Alles veröffentlicht</p>
+      <button class="hb-btn hb-btn--dark" type="button" id="ad-publish-btn" disabled>Veröffentlichen</button>
+    </div>
   </div>
 
-  <div class="hb-bottom">
-    <section class="hb-steps" id="ueber-uns" aria-labelledby="hb-steps-title">
-      <h2 class="hb-h2" id="hb-steps-title">So funktioniert’s</h2>
-      <ol class="hb-steps__list">
-        <li class="hb-step">
-          <span class="hb-step__icon" data-icon="search"></span>
-          <h3>1. Informieren</h3>
-          <p>Wähle ein Land oder Projekt aus und erfahre mehr über die aktuelle Lage.</p>
-        </li>
-        <li class="hb-step">
-          <span class="hb-step__icon" data-icon="heart"></span>
-          <h3>2. Spenden</h3>
-          <p>Unterstütze mit einem Betrag deiner Wahl.</p>
-        </li>
-        <li class="hb-step">
-          <span class="hb-step__icon" data-icon="truck"></span>
-          <h3>3. Hilfe vor Ort</h3>
-          <p>Wir sorgen dafür, dass deine Spende direkt bei den Menschen ankommt – z.&nbsp;B. in Form von Essen, Wasser, Medizin und Schutzunterkünften.</p>
-        </li>
-        <li class="hb-step">
-          <span class="hb-step__icon" data-icon="chart-line"></span>
-          <h3>4. Wirkung sehen</h3>
-          <p>Du erhältst regelmäßige Updates und kannst den Fortschritt unserer Projekte mitverfolgen.</p>
-        </li>
-      </ol>
-    </section>
-
-    <section class="hb-project" id="projekte" aria-label="Aktuelles Projekt">
-      <div id="hb-project"><div class="hb-proj hb-card--skel" aria-hidden="true"><span class="hb-skel hb-skel--media"></span><span class="hb-skel hb-skel--text"></span><span class="hb-skel hb-skel--pill"></span></div></div>
-    </section>
-
-    <section class="hb-quote" id="hb-quote" aria-labelledby="hb-quote-title">
-      <div class="hb-quote__inner">
-        <h2 class="hb-quote__title" id="hb-quote-title">„Jede Spende ist ein Zeichen, dass die Welt nicht wegschaut.“</h2>
-        <p>Gemeinsam können wir Leben retten, Hoffnung schenken und echte Veränderungen möglich machen.</p>
-        <button class="hb-btn hb-btn--glass" type="button" data-donate>
-          <span>Jetzt Teil der Lösung werden</span><span data-icon="arrow-right"></span>
-        </button>
+  <!-- Editor für Land / Projekt -->
+  <dialog class="ad-dialog" id="ad-dialog" aria-labelledby="ad-dialog-title">
+    <form class="ad-form" id="ad-dialog-form" method="dialog" novalidate>
+      <div class="ad-dialog__head">
+        <h2 id="ad-dialog-title"></h2>
+        <button class="hb-iconbtn" type="button" data-close aria-label="Schließen" data-icon="x"></button>
       </div>
-    </section>
-  </div>
+      <div class="ad-dialog__body" id="ad-dialog-body"></div>
+      <div class="ad-dialog__foot">
+        <button class="hb-btn ad-btn-ghost" type="button" data-close>Abbrechen</button>
+        <button class="hb-btn hb-btn--dark" type="submit">Übernehmen</button>
+      </div>
+    </form>
+  </dialog>
 
-  <footer class="hb-footer" id="kontakt">
-    <div class="hb-footer__brand">
-      <img class="hb-brand__logo" src="assets/img/logo.svg" alt="" width="40" height="42">
-      <span class="hb-brand__name">HumanityBridge</span>
-    </div>
-    <div class="hb-footer__social" id="hb-footer-social"></div>
-    <nav class="hb-footer__links" aria-label="Rechtliches">
-      <a href="impressum.html">Impressum</a>
-      <span>Datenschutz folgt</span>
-    </nav>
-    <p class="hb-footer__copy">© <span id="hb-year"></span> HumanityBridge</p>
-  </footer>
-
-  <!-- Bericht-Panel: Desktop von rechts, Mobil als Bottom-Sheet -->
-  <div class="hb-drawer" id="hb-drawer" hidden>
-    <div class="hb-drawer__backdrop" data-drawer-close></div>
-    <div class="hb-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="hb-drawer-title" tabindex="-1">
-      <button class="hb-iconbtn hb-drawer__close" type="button" aria-label="Schließen" data-drawer-close data-icon="x"></button>
-      <div class="hb-drawer__body" id="hb-drawer-body"></div>
-    </div>
-  </div>
-
+  <datalist id="ad-country-names"></datalist>
   <div class="hb-toast" id="hb-toast" role="status" aria-live="polite"></div>
 </body>
 </html>
