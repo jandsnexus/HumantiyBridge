@@ -181,6 +181,22 @@
     </form>
   </dialog>
 
+  <!-- Steckbrief einer Person: erst Ansicht, Bearbeiten nur über den Stift -->
+  <dialog class="ad-dialog ad-profile" id="ad-profile" aria-labelledby="ad-profile-title">
+    <div class="ad-profile__inner" id="ad-profile-body"></div>
+  </dialog>
+
+  <!-- Eigenes Bestätigungsfenster (statt Browser-Popup), sicherer Knopf ist vorausgewählt -->
+  <dialog class="ad-confirm" id="ad-confirm" aria-labelledby="ad-confirm-title" aria-describedby="ad-confirm-text">
+    <div class="ad-confirm__icon" id="ad-confirm-icon" aria-hidden="true"></div>
+    <h2 id="ad-confirm-title"></h2>
+    <p id="ad-confirm-text"></p>
+    <div class="ad-confirm__actions">
+      <button class="hb-btn ad-btn-ghost" type="button" id="ad-confirm-no"></button>
+      <button class="hb-btn hb-btn--dark" type="button" id="ad-confirm-yes"></button>
+    </div>
+  </dialog>
+
   <datalist id="ad-country-names"></datalist>
   <div class="hb-toast" id="hb-toast" role="status" aria-live="polite"></div>
 </body>
