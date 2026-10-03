@@ -1,139 +1,110 @@
 /*
- * Datenquelle der Startseite.
- * Phase 2: Dummy-Daten, exakt in der Form des späteren Firestore-Sammel-Dokuments "public/home".
- * Phase 5: Nur loadSiteData()/subscribeSiteData() werden auf Firestore umgestellt, der Rest bleibt.
- *
- * Alle Zahlen, Texte und Bilder hier sind PLATZHALTER und werden später im Admin gepflegt.
- * Leere Bild-URLs ("") zeigen einen Farbverlauf, bis im Admin ein Bild hochgeladen ist.
+ * Datenquelle der Startseite: live aus Firestore ("site/home").
+ * - Wiederholte Besuche zeigen sofort den zuletzt gespeicherten Stand (localStorage), dann live.
+ * - Solange im Admin noch nichts veröffentlicht wurde, erscheinen die Beispieldaten.
+ * - Jede Änderung im Admin erscheint ohne Neuladen.
  */
+import { loadFirestore } from "./firebase.js";
+import { SITE_DOC } from "./config.js";
+import { SAMPLE_DATA, PROJECT_TAGS } from "./sample-data.js";
 
-// Platzhalter-Flaggen vom CDN. Später lädt dein Team eigene Flaggen im Admin hoch.
-const FLAG = (code) => `https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/1x1/${code}.svg`;
+const CACHE_KEY = "hb-site-cache-v1";
 
-const DUMMY = {
-  settings: {
-    donationsEnabled: false,
-    socials: {
-      tiktok:    { url: "", handle: "@humanitybridge" },
-      instagram: { url: "", handle: "@humanitybridge" }
-    },
-    quoteBackgroundUrl: ""
-  },
+const arr = (v) => (Array.isArray(v) ? v : []);
+const str = (v) => (typeof v === "string" ? v : "");
+const paragraphs = (text) => str(text).split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
 
-  countries: [
-    {
-      id: "sudan",
-      name: "Sudan",
-      isoNumeric: "729",
-      mapColor: "#ff3b4e",
-      flagUrl: FLAG("sd"),
-      coverUrl: "",
-      badge: { text: "Akute Kriegslage", tone: "red" },
-      stats: [
-        { icon: "users", value: "48 Mio.", label: "Betroffene" },
-        { icon: "chart-pie", value: "70%", label: "ohne ausreichende Nahrung" }
-      ],
-      report: {
-        updatedAt: "2026-09-28",
-        paragraphs: [
-          "Platzhalter: Hier steht der Lagebericht zum Sudan, den euer Team im Admin einträgt.",
-          "Zum Beispiel: aktuelle Situation, wo eure Hilfe ankommt und welche Projekte gerade laufen."
-        ]
-      }
+/** Bringt gespeicherte Daten (egal wie unvollständig) in die Form, die die Startseite rendert. */
+export function normalizeSite(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const s = r.settings ?? {};
+  const projects = arr(r.projects).filter((p) => p && str(p.name));
+  const featured = projects.find((p) => p.featured) ?? projects[0] ?? null;
+
+  return {
+    settings: {
+      donationsEnabled: s.donationsEnabled === true,
+      socials: {
+        tiktok: { url: str(s.socials?.tiktok?.url), handle: str(s.socials?.tiktok?.handle) },
+        instagram: { url: str(s.socials?.instagram?.url), handle: str(s.socials?.instagram?.handle) }
+      },
+      quoteBackgroundUrl: str(s.quoteBackgroundUrl)
     },
-    {
-      id: "palaestina",
-      name: "Palästina",
-      isoNumeric: "275",
-      mapColor: "#ff4d6d",
-      flagUrl: FLAG("ps"),
-      coverUrl: "",
-      badge: { text: "Humanitäre Krise", tone: "red" },
-      stats: [
-        { icon: "users", value: "2,3 Mio.", label: "Binnenvertriebene" },
-        { icon: "heart", value: "90%", label: "benötigen humanitäre Hilfe" }
-      ],
-      report: {
-        updatedAt: "2026-09-28",
-        paragraphs: [
-          "Platzhalter: Hier steht der Lagebericht zu Palästina, den euer Team im Admin einträgt."
-        ]
-      }
-    },
-    {
-      id: "afghanistan",
-      name: "Afghanistan",
-      isoNumeric: "004",
-      mapColor: "#ff8a1f",
-      flagUrl: FLAG("af"),
-      coverUrl: "",
-      badge: { text: "Hungersnot droht", tone: "orange" },
-      stats: [
-        { icon: "users", value: "23 Mio.", label: "Menschen in Not" },
-        { icon: "heart", value: "60%", label: "keinen Zugang zu sauberem Wasser" }
-      ],
-      report: {
-        updatedAt: "2026-09-28",
-        paragraphs: [
-          "Platzhalter: Hier steht der Lagebericht zu Afghanistan, den euer Team im Admin einträgt."
-        ]
-      }
-    },
-    {
-      id: "kongo",
-      name: "Dem. Rep. Kongo",
-      isoNumeric: "180",
-      mapColor: "#9b6bff",
-      flagUrl: FLAG("cd"),
-      coverUrl: "",
-      badge: { text: "Konflikt & Gewalt", tone: "blue" },
-      stats: [
-        { icon: "users", value: "7,9 Mio.", label: "Binnenvertriebene" },
-        { icon: "heart", value: "50%", label: "unterernährt" }
-      ],
-      report: {
-        updatedAt: "2026-09-28",
-        paragraphs: [
-          "Platzhalter: Hier steht der Lagebericht zur Dem. Rep. Kongo, den euer Team im Admin einträgt."
-        ]
-      }
+    countries: arr(r.countries)
+      .filter((c) => c && c.visible !== false && str(c.name) && str(c.id))
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        isoNumeric: str(c.isoNumeric),
+        mapColor: str(c.mapColor),
+        flagUrl: str(c.flagUrl),
+        coverUrl: str(c.coverUrl),
+        badge: { text: str(c.badge?.text), tone: str(c.badge?.tone) },
+        stats: arr(c.stats).slice(0, 2).map((st) => ({ icon: str(st?.icon), value: str(st?.value), label: str(st?.label) }))
+          .filter((st) => st.value || st.label),
+        report: { updatedAt: str(c.report?.updatedAt), paragraphs: paragraphs(c.report?.text) }
+      })),
+    moreCountries: { text: str(r.moreCountries?.text), coverUrl: str(r.moreCountries?.coverUrl) },
+    featuredProject: featured && {
+      id: str(featured.id),
+      name: featured.name,
+      thumbnailUrl: str(featured.thumbnailUrl),
+      badges: arr(featured.badges).map(str),
+      description: str(featured.description),
+      tags: arr(featured.tags).map((label) => ({ icon: PROJECT_TAGS[label] ?? "box", label: str(label) })),
+      paragraphs: paragraphs(featured.text)
     }
-  ],
+  };
+}
 
-  moreCountries: {
-    text: "z. B. Jemen, Syrien, Ukraine, Südsudan & mehr.",
-    coverUrl: ""
-  },
-
-  featuredProject: {
-    id: "food-camp",
-    name: "Essen & Trinken für Familien",
-    thumbnailUrl: "",
-    badges: ["Projekt-Beispiel", "Food-Camp"],
-    description: "In den Krisengebieten werden mobile Food-Camps aufgebaut, in denen Familien täglich mit Lebensmitteln, Trinkwasser und wichtigen Hilfsgütern versorgt werden.",
-    tags: [
-      { icon: "utensils", label: "Lebensmittel" },
-      { icon: "droplet", label: "Trinkwasser" },
-      { icon: "spray-can", label: "Hygiene" },
-      { icon: "pill", label: "Medizin" }
-    ],
-    paragraphs: [
-      "Platzhalter: Ausführliche Projektbeschreibung, die euer Team im Admin einträgt."
-    ]
+function readCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
   }
-};
+}
 
-/** Einmaliges Laden. Gibt eine Kopie zurück, damit niemand die Quelle verändert. */
-export async function loadSiteData() {
-  return structuredClone(DUMMY);
+function writeCache(data) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (e) { /* Speicher voll/privat */ }
 }
 
 /**
- * Live-Abo. Phase 5: wird zu onSnapshot(doc(db, "public", "home"), ...).
- * Gibt eine Funktion zum Abmelden zurück, wie Firestore.
+ * Live-Abo. onData(site | null, source) mit source = "cache" | "live" | "sample" | "error".
+ * null bedeutet: nichts verfügbar (offline beim allerersten Besuch).
+ * Gibt eine Abmelde-Funktion zurück.
  */
 export function subscribeSiteData(onData) {
-  let active = true;
-  loadSiteData().then((d) => { if (active) onData(d); });
-  return () => { active = false; };
+  let stopped = false;
+  let unsubscribe = () => {};
+  const cached = readCache();
+  if (cached) onData(normalizeSite(cached), "cache");
+
+  loadFirestore()
+    .then(({ f, db }) => {
+      if (stopped) return;
+      unsubscribe = f.onSnapshot(
+        f.doc(db, ...SITE_DOC),
+        (snap) => {
+          if (snap.exists()) {
+            const { updatedAt, ...data } = snap.data(); // Zeitstempel nicht cachen
+            writeCache(data);
+            onData(normalizeSite(data), "live");
+          } else {
+            onData(normalizeSite(SAMPLE_DATA), "sample");
+          }
+        },
+        (err) => {
+          console.error("Firestore:", err);
+          if (!cached) onData(null, "error");
+        }
+      );
+    })
+    .catch((err) => {
+      console.error("Firebase konnte nicht geladen werden:", err);
+      if (!cached) onData(null, "error");
+    });
+
+  return () => { stopped = true; unsubscribe(); };
 }
