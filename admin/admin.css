@@ -266,3 +266,65 @@
   .ad-dialog__body { padding: 16px; }
   .ad-panel__head .hb-btn { width: 100%; }
 }
+
+/* =========================================================
+   Ladescreen (nur Admin) – lebendig, aber nur Transform/Opacity-Animationen (flüssig auf jedem Gerät)
+   ========================================================= */
+.ad-loader {
+  position: fixed; inset: 0; z-index: 500; overflow: hidden;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(60% 50% at 50% 42%, rgba(47, 111, 237, .22) 0%, rgba(47, 111, 237, 0) 70%),
+    radial-gradient(120% 90% at 50% 0%, #142a4d 0%, #0a1426 55%, #060d19 100%);
+  transition: opacity .55s var(--ease), visibility .55s;
+  animation: ad-loader-fallback .5s 12s forwards; /* ohne JS trotzdem weg */
+}
+.ad-loader::before { /* langsam wandernder Lichtschimmer */
+  /* Quadrat mit 160 % der größeren Bildschirmseite: beim Drehen bleiben die Kanten immer außerhalb */
+  content: ""; position: absolute; left: 50%; top: 50%; width: 160vmax; height: 160vmax; margin: -80vmax 0 0 -80vmax;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(111, 163, 255, .08) 60deg, transparent 140deg, rgba(155, 107, 255, .06) 220deg, transparent 300deg);
+  animation: ad-spin 18s linear infinite;
+}
+.ad-loader.is-done { opacity: 0; visibility: hidden; pointer-events: none; }
+.ad-loader.is-done .ad-loader__center { transform: scale(1.06); }
+@keyframes ad-loader-fallback { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+
+.ad-loader__sky { position: absolute; inset: 0; pointer-events: none; }
+.ad-loader__sky i {
+  position: absolute; left: var(--x); bottom: -10px; width: var(--s); height: var(--s); border-radius: 999px;
+  background: #a9ceff; box-shadow: 0 0 8px 2px rgba(111, 163, 255, .6); opacity: 0;
+  animation: ad-rise var(--t) linear var(--d) infinite;
+}
+@keyframes ad-rise {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  15% { opacity: .9; }
+  60% { transform: translate3d(14px, -60vh, 0); opacity: .5; }
+  100% { transform: translate3d(-10px, -110vh, 0); opacity: 0; }
+}
+
+.ad-loader__center { position: relative; display: grid; justify-items: center; gap: 14px; padding: 24px; text-align: center; transition: transform .55s var(--ease); }
+.ad-loader__emblem { position: relative; width: 168px; height: 168px; display: grid; place-items: center; margin-bottom: 6px; }
+.ad-loader__ring { position: absolute; border-radius: 999px; }
+.ad-loader__ring--outer { inset: 0; border: 2px solid transparent; border-top-color: #6fa3ff; border-right-color: rgba(111, 163, 255, .35); animation: ad-spin 2.4s cubic-bezier(.6, .1, .4, .9) infinite; }
+.ad-loader__ring--inner { inset: 16px; border: 1.5px dashed rgba(169, 206, 255, .35); animation: ad-spin 9s linear infinite reverse; }
+.ad-loader__orbit { position: absolute; inset: -6px; animation: ad-spin 3.6s linear infinite; }
+.ad-loader__orbit--2 { inset: 10px; animation-duration: 5.2s; animation-direction: reverse; }
+.ad-loader__orbit b { position: absolute; top: 0; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: 999px; background: #fff; box-shadow: 0 0 12px 3px #6fa3ff; }
+.ad-loader__orbit--2 b { width: 6px; height: 6px; background: #c7b3ff; box-shadow: 0 0 10px 3px #9b6bff; }
+.ad-loader__logo { width: 88px; height: auto; filter: drop-shadow(0 0 18px rgba(111, 163, 255, .55)); animation: ad-breathe 3.2s ease-in-out infinite; }
+@keyframes ad-breathe {
+  0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 14px rgba(111, 163, 255, .45)); }
+  50% { transform: translateY(-5px) scale(1.04); filter: drop-shadow(0 0 26px rgba(111, 163, 255, .8)); }
+}
+.ad-loader__title { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: #fff; }
+.ad-loader__title span { background: linear-gradient(90deg, #8fb8ff, #c7b3ff); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+.ad-loader__status { min-height: 1.5em; font-size: 14px; color: #93a9c9; animation: ad-fade-in .35s var(--ease); }
+@keyframes ad-fade-in { from { opacity: 0; transform: translateY(4px); } }
+.ad-loader__bar { position: relative; width: 180px; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.ad-loader__bar span {
+  position: absolute; inset: 0; width: 45%; border-radius: inherit;
+  background: linear-gradient(90deg, transparent, #6fa3ff, #c7b3ff, transparent);
+  animation: ad-sweep 1.4s ease-in-out infinite;
+}
+@keyframes ad-sweep { from { transform: translateX(-110%); } to { transform: translateX(250%); } }
+@media (max-width: 420px) { .ad-loader__emblem { width: 140px; height: 140px; } .ad-loader__logo { width: 74px; } }
