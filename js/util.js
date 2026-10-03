@@ -62,3 +62,31 @@ export function imgTag(url, attrs = "", width = 0) {
   const u = sizedUrl(url, width);
   return u ? `<img src="${esc(u)}" ${attrs}>` : "";
 }
+
+/*
+ * Social-Media-Links vervollständigen. Ohne "https://" würde der Browser den Link als Unterseite
+ * der eigenen Website öffnen (→ 404 auf GitHub). Akzeptiert:
+ *   https://www.tiktok.com/@name · www.tiktok.com/@name · tiktok.com/@name · vm.tiktok.com/xyz · @name · name
+ * Gibt einen vollständigen https-Link zurück oder "" (ungültig → "Link folgt").
+ */
+const SOCIAL = {
+  tiktok: { hosts: /^(www\.|m\.|vm\.|vt\.)?tiktok\.com(\/|$)/i, profile: (h) => `https://www.tiktok.com/@${h}` },
+  instagram: { hosts: /^(www\.|m\.)?(instagram\.com|instagr\.am)(\/|$)/i, profile: (h) => `https://www.instagram.com/${h}/` }
+};
+
+export function socialUrl(input, platform) {
+  const v = String(input ?? "").trim();
+  const cfg = SOCIAL[platform];
+  if (!v || !cfg) return "";
+  // Nur ein Name (mit oder ohne @) → Profil-Link bauen
+  const handle = v.match(/^@?([A-Za-z0-9._]{2,30})$/);
+  if (handle && !handle[1].includes("..") && !/\.(com|de|net|org|am)$/i.test(handle[1])) return cfg.profile(handle[1]);
+  // http(s) vorne ergänzen bzw. auf https umstellen
+  const withScheme = /^https?:\/\//i.test(v) ? v.replace(/^http:\/\//i, "https://") : `https://${v}`;
+  let url;
+  try { url = new URL(withScheme); } catch (e) { return ""; }
+  if (url.protocol !== "https:" || /\s/.test(v)) return "";
+  // Muss zur Plattform passen (z. B. kein Instagram-Link im TikTok-Feld)
+  if (!cfg.hosts.test(url.host + url.pathname.slice(0, 1))) return "";
+  return url.href;
+}
