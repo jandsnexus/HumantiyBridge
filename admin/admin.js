@@ -376,8 +376,11 @@ function renderCountries() {
   if (!cs.length) {
     list.innerHTML = `<li class="ad-empty">Noch keine Länder. Mit „Land hinzufügen“ das erste anlegen.</li>`;
   } else {
+    let visibleIndex = 0;
     list.innerHTML = cs.map((c, i) => {
       const onMap = c.isoNumeric && byKey.has(c.isoNumeric);
+      // Die ersten 3 sichtbaren Länder sind Karten auf der Startseite, alle weiteren unter „Weitere Länder“
+      const place = !c.visible ? "" : (visibleIndex++ < 3 ? "Karte auf der Startseite" : "Unter „Weitere Länder“");
       return `
       <li class="ad-row ${c.visible ? "" : "is-hidden"}" data-id="${esc(c.id)}">
         <span class="ad-row__thumb">${imgTag(c.flagUrl, 'class="hb-flag" alt="" width="40" height="40"', 96) || `<span class="hb-flag hb-flag--icon">${icon("globe")}</span>`}</span>
@@ -386,7 +389,7 @@ function renderCountries() {
           <span class="ad-row__meta">
             ${c.badge.text ? `<span class="hb-badge hb-badge--${c.badge.tone}">${esc(c.badge.text)}</span>` : ""}
             <span class="${onMap ? "ad-ok" : "ad-warn"}">${icon(onMap ? "map-pin" : "triangle-alert")}${onMap ? "Auf der Karte" : "Nicht auf der Karte"}</span>
-            ${c.visible ? "" : `<span class="ad-muted">Ausgeblendet</span>`}
+            ${c.visible ? `<span class="ad-place ${place.startsWith("Karte") ? "is-card" : ""}">${place}</span>` : `<span class="ad-muted">Ausgeblendet</span>`}
           </span>
         </span>
         <span class="ad-row__actions">
