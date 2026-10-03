@@ -5,9 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>HumanityBridge – Hoffnung in Kriegsgebieten</title>
   <meta name="description" content="HumanityBridge verbindet Menschen, die helfen wollen, mit Menschen in Kriegs- und Krisengebieten.">
-  <meta name="theme-color" content="#0f1b2d">
+  <meta name="theme-color" content="#ffffff">
+  <!-- App-Icon für "Zum Home-Bildschirm" (iPhone/iPad/Android) und Browser-Tabs -->
   <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-title" content="HumanityBridge">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
   <link rel="stylesheet" href="css/styles.css">
   <script>
     /* Ladescreen nur einmal pro Session: Flag vor dem ersten Paint setzen, sonst blitzt er auf. */
@@ -92,7 +102,11 @@
 
       <aside class="hb-panel hb-follow" aria-labelledby="hb-follow-title">
         <h2 class="hb-panel__title" id="hb-follow-title">Folge unserer Arbeit</h2>
-        <ul class="hb-follow__list" id="hb-follow-list"></ul>
+        <ul class="hb-follow__list" id="hb-follow-list">
+          <li><div class="hb-follow__item"><span class="hb-skel hb-skel--circle"></span><span class="hb-skel hb-skel--text"></span></div></li>
+          <li><div class="hb-follow__item"><span class="hb-skel hb-skel--circle"></span><span class="hb-skel hb-skel--text"></span></div></li>
+          <li><div class="hb-follow__item"><span class="hb-skel hb-skel--circle"></span><span class="hb-skel hb-skel--text"></span></div></li>
+        </ul>
       </aside>
 
       <section class="hb-crisis" id="laender" aria-labelledby="hb-crisis-title">
@@ -105,7 +119,12 @@
             <span>Alle Länder anzeigen</span><span data-icon="arrow-right"></span>
           </button>
         </div>
-        <div class="hb-cards" id="hb-cards" role="list"></div>
+        <div class="hb-cards" id="hb-cards" role="list" aria-busy="true">
+          <div class="hb-card hb-card--skel" aria-hidden="true"><span class="hb-skel hb-skel--media"></span><span class="hb-skel hb-skel--text"></span><span class="hb-skel hb-skel--pill"></span></div>
+          <div class="hb-card hb-card--skel" aria-hidden="true"><span class="hb-skel hb-skel--media"></span><span class="hb-skel hb-skel--text"></span><span class="hb-skel hb-skel--pill"></span></div>
+          <div class="hb-card hb-card--skel" aria-hidden="true"><span class="hb-skel hb-skel--media"></span><span class="hb-skel hb-skel--text"></span><span class="hb-skel hb-skel--pill"></span></div>
+          <div class="hb-card hb-card--skel" aria-hidden="true"><span class="hb-skel hb-skel--media"></span><span class="hb-skel hb-skel--text"></span><span class="hb-skel hb-skel--pill"></span></div>
+        </div>
       </section>
     </main>
   </div>
@@ -138,7 +157,7 @@
     </section>
 
     <section class="hb-project" id="projekte" aria-label="Aktuelles Projekt">
-      <div id="hb-project"></div>
+      <div id="hb-project"><div class="hb-proj hb-card--skel" aria-hidden="true"><span class="hb-skel hb-skel--media"></span><span class="hb-skel hb-skel--text"></span><span class="hb-skel hb-skel--pill"></span></div></div>
     </section>
 
     <section class="hb-quote" id="hb-quote" aria-labelledby="hb-quote-title">
