@@ -1,6 +1,6 @@
 import { subscribeSiteData } from "./data.js";
 import { hydrateIcons, toast } from "./util.js";
-import { renderFollow, renderCards, renderProject, renderQuote, renderFooter, applyDonationState } from "./render.js";
+import { renderFollow, renderCards, renderProject, renderQuote, renderFooter, applyDonationState, renderUnavailable } from "./render.js";
 import { initDrawer, openCountryReport, openProject, openCountryList } from "./drawer.js";
 import { createMap } from "./map.js";
 import { initLoader } from "./loader.js";
@@ -16,6 +16,10 @@ function showCountry(id) {
 }
 
 function render(data) {
+  if (!data) { // allererster Besuch und offline/blockiert
+    if (!site) renderUnavailable();
+    return;
+  }
   site = data;
   renderFollow(data.settings);
   renderCards(data.countries, data.moreCountries);
@@ -54,7 +58,10 @@ hydrateIcons();
 initDrawer();
 initScrollSpy();
 
-const map = createMap(document.getElementById("hb-map"), { onSelect: showCountry });
+const map = createMap(document.getElementById("hb-map"), {
+  onSelect: showCountry,
+  avoid: [".hb-hero__content", ".hb-hero__all"] // Labels weichen Text und Button im Hero aus
+});
 
 initSearch(() => site, {
   onCountry: showCountry,
