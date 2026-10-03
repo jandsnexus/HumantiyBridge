@@ -116,19 +116,26 @@
         </form>
       </section>
 
-      <section class="ad-panel" id="panel-team" role="tabpanel" hidden>
-        <div class="ad-panel__head">
-          <div>
-            <h2>Team</h2>
-            <p class="ad-muted">Nur hier im Admin sichtbar, erscheint nirgends auf der Website. Änderungen werden sofort gespeichert.</p>
-          </div>
-        </div>
+      <section class="ad-panel ad-team" id="panel-team" role="tabpanel" hidden>
+        <header class="ad-team__hero">
+          <img class="ad-team__logo" src="../assets/img/logo-light.svg" alt="" width="96" height="101">
+          <h2>Gemeinsam bewirken wir mehr.</h2>
+          <p>Jede Stunde, die ihr hier investiert, kommt bei Menschen in Kriegsgebieten an. Danke, dass ihr dabei seid.</p>
+          <span class="ad-team__count" id="ad-team-count"></span>
+        </header>
+
+        <div class="ad-team__error" id="ad-team-error" role="alert" hidden></div>
+
+        <ul class="ad-team__grid" id="ad-team-list"></ul>
+
         <form class="ad-team-form" id="ad-team-form" novalidate>
-          <label class="ad-field"><span>Name</span><input type="text" name="member" maxlength="60" autocomplete="off" placeholder="Vor- und Nachname"></label>
-          <button class="hb-btn hb-btn--dark" type="submit"><span data-icon="plus"></span><span>Hinzufügen</span></button>
+          <fieldset>
+            <label class="ad-field"><span>Neues Mitglied</span><input type="text" name="member" maxlength="60" autocomplete="off" placeholder="Vor- und Nachname"></label>
+            <button class="hb-btn hb-btn--dark" type="submit"><span data-icon="plus"></span><span>Hinzufügen</span></button>
+          </fieldset>
         </form>
-        <ul class="ad-list" id="ad-team-list"></ul>
-        <button class="hb-btn ad-btn-ghost" type="button" id="ad-team-import" hidden><span data-icon="users"></span><span>Namen aus dem Impressum übernehmen</span></button>
+        <button class="hb-btn ad-btn-ghost ad-team__import" type="button" id="ad-team-import" hidden><span data-icon="users"></span><span>Namen aus dem Impressum übernehmen</span></button>
+        <p class="ad-muted ad-team__note">Nur hier im Admin sichtbar, erscheint nirgends auf der Website. Änderungen werden sofort gespeichert.</p>
       </section>
     </main>
 
