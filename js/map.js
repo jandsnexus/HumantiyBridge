@@ -207,7 +207,7 @@ export function createMap(container, { onSelect, avoid = [] }) {
     ctx.lineWidth = 0.6 / t.k;
     ctx.strokeStyle = BORDER;
     ctx.lineJoin = "round";
-    if (interacting && landLow && t.k < home.k * 2.5) {
+    if (interacting && landLow && t.k < home.k * 5) {
       // In Bewegung: leichte Karte (fällt in der Bewegung nicht auf, ist aber ~10× schneller)
       ctx.fill(landLow);
       ctx.stroke(landLow);
