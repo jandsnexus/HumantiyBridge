@@ -51,9 +51,9 @@ export function openCountryReport(c) {
 
   open(`
     <div class="hb-report__media">
-      ${imgTag(c.coverUrl, 'alt=""')}
+      ${imgTag(c.coverUrl, 'alt=""', 920)}
       <div class="hb-report__head">
-        ${imgTag(c.flagUrl, `class="hb-flag" alt="Flagge ${esc(c.name)}" width="44" height="44"`) || `<span class="hb-flag hb-flag--icon">${icon("globe")}</span>`}
+        ${imgTag(c.flagUrl, `class="hb-flag" alt="Flagge ${esc(c.name)}" width="44" height="44"`, 96) || `<span class="hb-flag hb-flag--icon">${icon("globe")}</span>`}
         <div>
           <h2 id="hb-drawer-title">${esc(c.name)}</h2>
           ${c.badge?.text ? `<span class="hb-badge hb-badge--${badgeTone(c.badge.tone)}">${esc(c.badge.text)}</span>` : ""}
@@ -73,7 +73,7 @@ export function openProject(p) {
   const paras = (p.paragraphs ?? []).map((x) => `<p>${esc(x)}</p>`).join("");
   open(`
     <div class="hb-report__media hb-report__media--project">
-      ${imgTag(p.thumbnailUrl, 'alt=""')}
+      ${imgTag(p.thumbnailUrl, 'alt=""', 920)}
     </div>
     <div class="hb-report__content">
       <h2 id="hb-drawer-title">${esc(p.name)}</h2>
@@ -87,7 +87,7 @@ export function openCountryList(countries) {
   const items = countries.map((c) => `
     <li>
       <button type="button" class="hb-listrow" data-open-report="${esc(c.id)}">
-        ${imgTag(c.flagUrl, 'class="hb-flag" alt="" width="36" height="36"') || `<span class="hb-flag hb-flag--icon">${icon("globe")}</span>`}
+        ${imgTag(c.flagUrl, 'class="hb-flag" alt="" width="36" height="36"', 96) || `<span class="hb-flag hb-flag--icon">${icon("globe")}</span>`}
         <span><strong>${esc(c.name)}</strong><small>${esc(c.badge?.text ?? "")}</small></span>
         ${icon("arrow-right")}
       </button>
