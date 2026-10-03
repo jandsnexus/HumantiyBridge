@@ -45,7 +45,7 @@ function countryCard(c) {
     </li>`).join("");
 
   return `
-    <article class="hb-card" role="listitem">
+    <div class="hb-card" role="listitem">
       <div class="hb-card__media">
         ${imgTag(c.coverUrl, 'class="hb-card__img" alt="" loading="lazy" decoding="async"', 640)}
         <div class="hb-card__head">
@@ -63,12 +63,12 @@ function countryCard(c) {
           <span>Mehr erfahren</span>${icon("arrow-right")}
         </button>
       </div>
-    </article>`;
+    </div>`;
 }
 
 function moreCard(more) {
   return `
-    <article class="hb-card hb-card--more" role="listitem">
+    <div class="hb-card hb-card--more" role="listitem">
       <div class="hb-card__media">
         ${imgTag(more?.coverUrl, 'class="hb-card__img" alt="" loading="lazy" decoding="async"', 640)}
         <div class="hb-card__head">
@@ -85,7 +85,7 @@ function moreCard(more) {
           <span>Alle Länder anzeigen</span>${icon("arrow-right")}
         </button>
       </div>
-    </article>`;
+    </div>`;
 }
 
 export function renderCards(countries, more) {
@@ -137,7 +137,7 @@ export function renderFooter(settings) {
       const u = safeUrl(url);
       return u
         ? `<a class="hb-iconbtn" href="${esc(u)}" target="_blank" rel="noopener noreferrer" aria-label="${label}">${icon(ic)}</a>`
-        : `<span class="hb-iconbtn is-pending" title="${label}: Link folgt" aria-label="${label}: Link folgt">${icon(ic)}</span>`;
+        : `<span class="hb-iconbtn is-pending" role="img" title="${label}: Link folgt" aria-label="${label}: Link folgt">${icon(ic)}</span>`;
     }).join("");
   document.getElementById("hb-footer-social").innerHTML = links;
   document.getElementById("hb-year").textContent = new Date().getFullYear();
