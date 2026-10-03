@@ -15,6 +15,10 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const MAX_DOC_CHARS = 900_000; // Firestore-Limit liegt bei 1 MB pro Dokument
 const MAP_COLORS = ["#ff3b4e", "#ff4d6d", "#ff8a1f", "#f5c518", "#9b6bff", "#2f9bff"];
 const TONES = { red: "Rot", orange: "Orange", blue: "Blau", grey: "Grau" };
+const URL_OK = /^https?:\/\/\S+\.\S+/i;
+const MAX_SOURCES = 10;
+const TEAM_DOC = ["admin", "team"];   // nur für den Admin-Account lesbar, nie auf der Website
+const IMPRESSUM_TEAM = ["Samreen Singh", "Hassan Rashid", "Gülseher Aydin", "Nezha Khechab", "Tuana Eda Uğur", "Yunus Emre Karaus"];
 
 const EMPTY = () => ({
   settings: { donationsEnabled: false, socials: { tiktok: { url: "", handle: "" }, instagram: { url: "", handle: "" } }, quoteBackgroundUrl: "" },
@@ -58,7 +62,14 @@ function sanitize(raw) {
     coverUrl: s(c.coverUrl, 500), visible: c.visible !== false,
     badge: { text: s(c.badge?.text, 40), tone: TONES[c.badge?.tone] ? c.badge.tone : "red" },
     stats: [0, 1].map((i) => ({ icon: STAT_ICONS[c.stats?.[i]?.icon] ? c.stats[i].icon : "users", value: s(c.stats?.[i]?.value, 30), label: s(c.stats?.[i]?.label, 60) })),
-    report: { updatedAt: s(c.report?.updatedAt, 10), text: s(c.report?.text, 20000) }
+    report: {
+      updatedAt: s(c.report?.updatedAt, 10),
+      text: s(c.report?.text, 20000),
+      sources: (Array.isArray(c.report?.sources) ? c.report.sources : [])
+        .map((q) => ({ title: s(q?.title, 120), url: s(q?.url, 500).trim() }))
+        .filter((q) => URL_OK.test(q.url))
+        .slice(0, MAX_SOURCES)
+    }
   }));
   d.projects = (Array.isArray(r.projects) ? r.projects : []).filter((p) => p && p.id && p.name).map((p) => ({
     id: s(p.id, 80), name: s(p.name, 80), thumbnailUrl: s(p.thumbnailUrl, 500),
@@ -142,7 +153,7 @@ function initAuth() {
     }
     $("#ad-login").hidden = !!user;
     $("#ad-app").hidden = !user;
-    if (user) await loadData();
+    if (user) await Promise.all([loadData(), loadTeam()]);
   }));
 }
 
@@ -399,8 +410,9 @@ function openCountryEditor(existing) {
     id: "", name: "", isoNumeric: "", flagCode: "", flagUrl: "", flagCustom: false, mapColor: MAP_COLORS[0],
     coverUrl: "", visible: true, badge: { text: "", tone: "red" },
     stats: [{ icon: "users", value: "", label: "" }, { icon: "chart-pie", value: "", label: "" }],
-    report: { updatedAt: today(), text: "" }
+    report: { updatedAt: today(), text: "", sources: [] }
   };
+  if (!Array.isArray(c.report.sources)) c.report.sources = [];
 
   openDialog(isNew ? "Land hinzufügen" : `${c.name} bearbeiten`, `
     <label class="ad-field">
@@ -433,6 +445,12 @@ function openCountryEditor(existing) {
     <label class="ad-field"><span>Bericht – Stand</span><input type="date" name="reportDate" value="${esc(c.report.updatedAt || today())}"></label>
     <label class="ad-field"><span>Bericht (Absätze mit Leerzeile trennen)</span><textarea name="reportText" rows="8" maxlength="20000">${esc(c.report.text)}</textarea></label>
 
+    <div class="ad-field">
+      <span>Quellen (optional, max. ${MAX_SOURCES})</span>
+      <div class="ad-sources" id="ad-sources"></div>
+      <button type="button" class="hb-btn ad-btn-ghost hb-btn--sm ad-sources__add" id="ad-add-source">${icon("plus")}<span>Quelle hinzufügen</span></button>
+    </div>
+
     <label class="ad-switch"><input type="checkbox" name="visible" ${c.visible ? "checked" : ""}><span>Auf der Startseite zeigen</span></label>
   `, () => {
     const form = $("#ad-dialog-form");
@@ -445,7 +463,21 @@ function openCountryEditor(existing) {
     c.name = name;
     c.badge = { text: form.badgeText.value.trim(), tone: form.badgeTone.value };
     c.stats = [0, 1].map((i) => ({ icon: form[`stat${i}Icon`].value, value: form[`stat${i}Value`].value.trim(), label: form[`stat${i}Label`].value.trim() }));
-    c.report = { updatedAt: form.reportDate.value || today(), text: form.reportText.value.trim() };
+    const sources = [];
+    for (const row of form.querySelectorAll(".ad-source")) {
+      const title = row.querySelector("[data-src-title]").value.trim();
+      const urlEl = row.querySelector("[data-src-url]");
+      const url = urlEl.value.trim();
+      if (!title && !url) continue;
+      if (!URL_OK.test(url)) {
+        urlEl.classList.add("is-invalid");
+        urlEl.focus();
+        toast("Bitte einen vollständigen Link mit https:// eintragen.");
+        return false;
+      }
+      sources.push({ title, url });
+    }
+    c.report = { updatedAt: form.reportDate.value || today(), text: form.reportText.value.trim(), sources };
     c.visible = form.visible.checked;
     if (isNew) {
       c.id = slugify(name, new Set(state.data.countries.map((x) => x.id)));
@@ -461,6 +493,30 @@ function openCountryEditor(existing) {
 
   const form = $("#ad-dialog-form");
   const matchEl = $("#ad-match");
+  const sourcesEl = $("#ad-sources");
+  const addSourceBtn = $("#ad-add-source");
+
+  function addSourceRow(q = { title: "", url: "" }) {
+    sourcesEl.insertAdjacentHTML("beforeend", `
+      <div class="ad-source">
+        <input type="text" data-src-title value="${esc(q.title)}" placeholder="Titel, z. B. UNHCR-Bericht Mai 2026" maxlength="120" aria-label="Titel der Quelle">
+        <input type="url" data-src-url value="${esc(q.url)}" placeholder="https://…" inputmode="url" aria-label="Link zur Quelle">
+        <button type="button" class="hb-iconbtn ad-danger" data-src-remove aria-label="Quelle entfernen">${icon("trash-2")}</button>
+      </div>`);
+    addSourceBtn.hidden = sourcesEl.children.length >= MAX_SOURCES;
+  }
+  c.report.sources.forEach(addSourceRow);
+  addSourceBtn.addEventListener("click", () => {
+    addSourceRow();
+    sourcesEl.lastElementChild.querySelector("input").focus();
+  });
+  sourcesEl.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-src-remove]");
+    if (!b) return;
+    b.closest(".ad-source").remove();
+    addSourceBtn.hidden = sourcesEl.children.length >= MAX_SOURCES;
+  });
+  sourcesEl.addEventListener("input", (e) => e.target.classList.remove("is-invalid"));
 
   const flagField = imageField($("#ad-img-flag"), {
     label: "Flagge (wird automatisch gesetzt, eigene optional)", value: c.flagUrl, maxSize: 256, ratio: "square",
@@ -653,6 +709,85 @@ function initSettings() {
 }
 
 /* =========================================================
+   Team (nur im Admin sichtbar, eigenes gesperrtes Dokument)
+   ========================================================= */
+const team = { members: [], loaded: false, saving: false };
+
+function renderTeam() {
+  const list = $("#ad-team-list");
+  $("#ad-team-import").hidden = !team.loaded || team.members.length > 0;
+  list.innerHTML = !team.loaded ? `<li class="ad-empty">Team wird geladen …</li>`
+    : team.members.length ? team.members.map((m, i) => `
+      <li class="ad-row ad-row--team" data-index="${i}">
+        <span class="ad-avatar" aria-hidden="true">${esc(m.trim().charAt(0).toUpperCase())}</span>
+        <span class="ad-row__main"><strong>${esc(m)}</strong></span>
+        <span class="ad-row__actions">
+          <button class="hb-iconbtn ad-danger" type="button" data-team-remove aria-label="${esc(m)} entfernen">${icon("trash-2")}</button>
+        </span>
+      </li>`).join("")
+    : `<li class="ad-empty">Noch niemand eingetragen.</li>`;
+}
+
+async function saveTeam(next, message) {
+  if (team.saving) return false;
+  team.saving = true;
+  try {
+    const { f, db } = await loadFirestore();
+    await f.setDoc(f.doc(db, ...TEAM_DOC), { members: next, updatedAt: f.serverTimestamp() });
+    team.members = next;
+    renderTeam();
+    toast(message);
+    return true;
+  } catch (err) {
+    console.error(err);
+    alert(`Team konnte nicht gespeichert werden: ${errorText(err)}`);
+    return false;
+  } finally {
+    team.saving = false;
+  }
+}
+
+async function loadTeam() {
+  team.loaded = false;
+  renderTeam();
+  try {
+    const { f, db } = await loadFirestore();
+    const snap = await f.getDoc(f.doc(db, ...TEAM_DOC));
+    const members = snap.exists() && Array.isArray(snap.data().members) ? snap.data().members : [];
+    team.members = members.filter((m) => typeof m === "string" && m.trim()).map((m) => m.slice(0, 60));
+    team.loaded = true;
+    renderTeam();
+  } catch (err) {
+    console.error(err);
+    $("#ad-team-list").innerHTML = `<li class="ad-empty">${esc(errorText(err))}</li>`;
+  }
+}
+
+function initTeam() {
+  const form = $("#ad-team-form");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!team.loaded) return;
+    const name = form.member.value.trim().replace(/\s+/g, " ");
+    if (!name) { form.member.focus(); return; }
+    if (team.members.some((m) => m.toLowerCase() === name.toLowerCase())) { toast(`${name} ist schon eingetragen.`); return; }
+    if (team.members.length >= 50) { toast("Maximal 50 Namen."); return; }
+    if (await saveTeam([...team.members, name], `${name} hinzugefügt.`)) form.member.value = "";
+    form.member.focus();
+  });
+  $("#ad-team-list").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-team-remove]");
+    if (!b) return;
+    const i = Number(b.closest("[data-index]").dataset.index);
+    const name = team.members[i];
+    if (!confirm(`${name} aus dem Team entfernen?`)) return;
+    await saveTeam(team.members.filter((_, k) => k !== i), `${name} entfernt.`);
+  });
+  $("#ad-team-import").addEventListener("click", () =>
+    saveTeam([...IMPRESSUM_TEAM], "Team aus dem Impressum übernommen."));
+}
+
+/* =========================================================
    Start
    ========================================================= */
 function renderAll() {
@@ -673,6 +808,7 @@ function init() {
   $("#ad-country-names").innerHTML = countryNames.map((n) => `<option value="${esc(n)}"></option>`).join("");
   initTabs();
   initSettings();
+  initTeam();
   map = createMap($("#ad-map"), {
     onSelect: (id) => {
       const c = state.data.countries.find((x) => x.id === id);
