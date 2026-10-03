@@ -22,10 +22,12 @@ function hostOf(url) {
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return ""; }
 }
 
-function open(html) {
+function open(html, variant = "") {
   clearTimeout(closeTimer);
   const el = root();
   if (el.hidden) lastFocus = document.activeElement;
+  // Länderliste: feste Fensterhöhe, damit das Suchfeld beim Filtern nicht springt
+  panel().classList.toggle("hb-drawer__panel--list", variant === "list");
   body().innerHTML = html;
   panel().scrollTop = 0;
   el.hidden = false;
@@ -133,9 +135,13 @@ export function openProject(p) {
     </div>`);
 }
 
+/** Vergleichsform für die Suche: klein, ohne Akzente, ä = ae = a (so findet „sued“ auch „Südsudan“). */
+const searchNorm = (v) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/ß/g, "ss").replace(/ae/g, "a").replace(/oe/g, "o").replace(/ue/g, "u").replace(/[^a-z0-9]/g, "");
+
 export function openCountryList(countries) {
   const items = countries.map((c) => `
-    <li>
+    <li data-search="${esc(searchNorm(`${c.name} ${c.badge?.text ?? ""}`))}">
       <button type="button" class="hb-listrow" data-open-report="${esc(c.id)}">
         ${imgTag(c.flagUrl, 'class="hb-flag" alt="" width="36" height="36"', 96) || `<span class="hb-flag hb-flag--icon">${icon("globe")}</span>`}
         <span><strong>${esc(c.name)}</strong><small>${esc(c.badge?.text ?? "")}</small></span>
@@ -146,8 +152,31 @@ export function openCountryList(countries) {
     <div class="hb-report__content hb-report__content--list">
       <h2 id="hb-drawer-title">Alle Länder</h2>
       <p class="hb-report__date">Wähle ein Land, um den aktuellen Bericht zu lesen.</p>
-      <ul class="hb-list">${items}</ul>
-    </div>`);
+      ${countries.length > 1 ? `
+      <label class="hb-countrysearch">
+        ${icon("search")}
+        <span class="hb-visually-hidden">Land suchen</span>
+        <input type="search" data-country-search placeholder="Land suchen …" autocomplete="off" enterkeyhint="search">
+      </label>
+      <p class="hb-countrysearch__count" data-country-count aria-live="polite">${countries.length} ${countries.length === 1 ? "Land" : "Länder"}</p>` : ""}
+      <ul class="hb-list" data-country-list>${items}</ul>
+      <p class="hb-empty" data-country-empty hidden>Kein Land gefunden. Versuch es mit einer anderen Schreibweise.</p>
+    </div>`, "list");
+}
+
+function filterCountryList(input) {
+  const wrap = input.closest(".hb-report__content");
+  const q = searchNorm(input.value);
+  let hits = 0;
+  wrap.querySelectorAll("[data-country-list] > li").forEach((li) => {
+    const show = !q || li.dataset.search.includes(q);
+    li.hidden = !show;
+    if (show) hits++;
+  });
+  wrap.querySelector("[data-country-empty]").hidden = hits > 0;
+  wrap.querySelector("[data-country-count]").textContent = q
+    ? `${hits} Treffer`
+    : `${hits} ${hits === 1 ? "Land" : "Länder"}`;
 }
 
 /* ---------- Tabs: Klick + Pfeiltasten (Standard-Bedienung für Tabs) ---------- */
@@ -170,7 +199,16 @@ export function initDrawer() {
     const tab = e.target.closest('[role="tab"]');
     if (tab) selectTab(tab);
   });
+  root().addEventListener("input", (e) => {
+    if (e.target.matches("[data-country-search]")) filterCountryList(e.target);
+  });
   root().addEventListener("keydown", (e) => {
+    // Enter in der Suche öffnet den ersten Treffer
+    if (e.key === "Enter" && e.target.matches("[data-country-search]")) {
+      e.preventDefault();
+      root().querySelector("[data-country-list] > li:not([hidden]) .hb-listrow")?.click();
+      return;
+    }
     const tab = e.target.closest('[role="tab"]');
     if (!tab) return;
     const tabs = [...tab.closest('[role="tablist"]').querySelectorAll('[role="tab"]')];
