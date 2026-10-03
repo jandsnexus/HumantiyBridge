@@ -60,9 +60,10 @@
       </div>
     </header>
 
-    <div class="ad-banner" id="ad-banner" hidden></div>
-
     <main class="ad-main">
+      <h1 class="hb-visually-hidden">HumanityBridge Admin</h1>
+      <div class="ad-banner" id="ad-banner" role="status" hidden></div>
+
       <section class="ad-panel" id="panel-countries" role="tabpanel">
         <div class="ad-panel__head">
           <div>
@@ -131,10 +132,10 @@
       </section>
     </main>
 
-    <div class="ad-publish" id="ad-publish">
-      <p class="ad-publish__status" id="ad-status">Alles veröffentlicht</p>
+    <footer class="ad-publish" id="ad-publish" aria-label="Veröffentlichen">
+      <p class="ad-publish__status" id="ad-status" aria-live="polite">Alles veröffentlicht</p>
       <button class="hb-btn hb-btn--dark" type="button" id="ad-publish-btn" disabled>Veröffentlichen</button>
-    </div>
+    </footer>
   </div>
 
   <!-- Editor für Land / Projekt -->
