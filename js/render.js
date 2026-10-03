@@ -1,5 +1,5 @@
 import { icon } from "./icons.js";
-import { esc, safeUrl, sizedUrl, imgTag, badgeTone as tone } from "./util.js";
+import { esc, sizedUrl, imgTag, socialUrl, badgeTone as tone } from "./util.js";
 
 const cssUrl = (u) => `url("${u.replace(/"/g, "%22")}")`;
 
@@ -13,7 +13,7 @@ export function renderFollow(settings) {
   ];
 
   const socialHtml = rows.map((r) => {
-    const url = safeUrl(r.url);
+    const url = socialUrl(r.url, r.icon); // vervollständigt Links ohne https:// (sonst 404)
     const inner = `
       <span class="hb-follow__icon">${icon(r.icon)}</span>
       <span class="hb-follow__text">
@@ -146,7 +146,7 @@ export function renderFooter(settings) {
   const s = settings?.socials ?? {};
   const links = [["tiktok", "TikTok", s.tiktok?.url], ["instagram", "Instagram", s.instagram?.url]]
     .map(([ic, label, url]) => {
-      const u = safeUrl(url);
+      const u = socialUrl(url, ic);
       return u
         ? `<a class="hb-iconbtn" href="${esc(u)}" target="_blank" rel="noopener noreferrer" aria-label="${label}">${icon(ic)}</a>`
         : `<span class="hb-iconbtn is-pending" role="img" title="${label}: Link folgt" aria-label="${label}: Link folgt">${icon(ic)}</span>`;
