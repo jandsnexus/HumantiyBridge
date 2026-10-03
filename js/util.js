@@ -47,8 +47,18 @@ export const badgeTone = (t) => (BADGE_TONES.has(t) ? t : "grey");
 export const safeColor = (c, fallback = "#3d7bf5") =>
   /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(c ?? "")) ? c : fallback;
 
-/** <img> nur ausgeben, wenn es eine gültige URL gibt. Sonst bleibt der Farbverlauf dahinter sichtbar. */
-export function imgTag(url, attrs = "") {
+/**
+ * Cloudinary-Bilder in passender Größe anfordern (spart Datenvolumen + Credits).
+ * Liefert für Retina die doppelte Breite. Andere URLs bleiben unverändert.
+ */
+export function sizedUrl(url, width) {
   const u = safeUrl(url);
+  if (!width || !/^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//.test(u)) return u;
+  return u.replace("/image/upload/", `/image/upload/f_auto,q_auto,c_limit,w_${Math.round(width)}/`);
+}
+
+/** <img> nur ausgeben, wenn es eine gültige URL gibt. Sonst bleibt der Farbverlauf dahinter sichtbar. */
+export function imgTag(url, attrs = "", width = 0) {
+  const u = sizedUrl(url, width);
   return u ? `<img src="${esc(u)}" ${attrs}>` : "";
 }
