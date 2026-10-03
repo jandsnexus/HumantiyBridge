@@ -114,11 +114,12 @@
           <fieldset class="ad-group">
             <legend>Social Media</legend>
             <div class="ad-grid2">
-              <label class="ad-field"><span>TikTok-Link</span><input type="url" name="tiktokUrl" placeholder="https://www.tiktok.com/@…" inputmode="url"></label>
+              <label class="ad-field"><span>TikTok-Link</span><input type="url" name="tiktokUrl" placeholder="https://www.tiktok.com/@…" inputmode="url" autocomplete="off" aria-describedby="ad-social-hint"><small class="ad-field__err" data-err="tiktokUrl" hidden></small></label>
               <label class="ad-field"><span>TikTok-Name</span><input type="text" name="tiktokHandle" placeholder="@humanitybridge" maxlength="40"></label>
-              <label class="ad-field"><span>Instagram-Link</span><input type="url" name="instagramUrl" placeholder="https://www.instagram.com/…" inputmode="url"></label>
+              <label class="ad-field"><span>Instagram-Link</span><input type="url" name="instagramUrl" placeholder="https://www.instagram.com/…" inputmode="url" autocomplete="off" aria-describedby="ad-social-hint"><small class="ad-field__err" data-err="instagramUrl" hidden></small></label>
               <label class="ad-field"><span>Instagram-Name</span><input type="text" name="instagramHandle" placeholder="@humanitybridge" maxlength="40"></label>
             </div>
+            <p class="ad-muted" id="ad-social-hint">Tipp: Profil-Link aus der App kopieren oder einfach <strong>@euername</strong> eintragen – der vollständige Link wird automatisch ergänzt.</p>
           </fieldset>
           <fieldset class="ad-group">
             <legend>Zitat unten rechts</legend>
