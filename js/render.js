@@ -66,7 +66,17 @@ function countryCard(c) {
     </div>`;
 }
 
-function moreCard(more) {
+/** So viele Länder erscheinen als eigene Karte. Alle weiteren stehen unter „Weitere Länder“. */
+export const FEATURED_COUNTRIES = 3;
+
+function moreCard(more, rest) {
+  // Gibt es mehr als 3 Länder, nennt die Karte automatisch die übrigen; sonst gilt der Text aus dem Admin
+  const names = rest.map((c) => c.name);
+  const text = rest.length
+    ? `${names.slice(0, 3).join(", ")}${rest.length > 3 ? ` und ${rest.length - 3} weitere` : ""}.`
+    : (more?.text ?? "");
+  const flags = rest.slice(0, 5).map((c) =>
+    imgTag(c.flagUrl, `class="hb-flag hb-card__miniflag" alt="" width="26" height="26" title="${esc(c.name)}"`, 64)).join("");
   return `
     <div class="hb-card hb-card--more" role="listitem">
       <div class="hb-card__media">
@@ -75,12 +85,13 @@ function moreCard(more) {
           <span class="hb-flag hb-flag--icon">${icon("globe")}</span>
           <div>
             <h3 class="hb-card__name">Weitere Länder</h3>
-            <span class="hb-badge hb-badge--grey">Auch wichtig</span>
+            <span class="hb-badge hb-badge--grey">${rest.length ? `+${rest.length} ${rest.length === 1 ? "Land" : "Länder"}` : "Auch wichtig"}</span>
           </div>
         </div>
       </div>
       <div class="hb-card__body">
-        <p class="hb-card__more">${esc(more?.text ?? "")}</p>
+        ${flags ? `<div class="hb-card__flags" aria-hidden="true">${flags}</div>` : ""}
+        <p class="hb-card__more">${esc(text)}</p>
         <button class="hb-pill hb-card__cta" type="button" data-open-countries>
           <span>Alle Länder anzeigen</span>${icon("arrow-right")}
         </button>
@@ -90,8 +101,9 @@ function moreCard(more) {
 
 export function renderCards(countries, more) {
   const el = document.getElementById("hb-cards");
-  const items = countries.map(countryCard).join("");
-  el.innerHTML = items + moreCard(more);
+  const shown = countries.slice(0, FEATURED_COUNTRIES);
+  const rest = countries.slice(FEATURED_COUNTRIES);
+  el.innerHTML = shown.map(countryCard).join("") + moreCard(more, rest);
   el.removeAttribute("aria-busy");
 }
 
