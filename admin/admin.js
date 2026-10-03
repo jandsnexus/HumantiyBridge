@@ -29,6 +29,49 @@ const EMPTY = () => ({
 });
 
 const state = { data: EMPTY(), rev: 0, dirty: false, busy: false, uploads: 0 };
+
+/* ---------- Ladescreen: zeigt den echten Fortschritt (Verbindung → Anmeldung → Inhalte) ---------- */
+const loader = (() => {
+  const el = document.getElementById("ad-loader");
+  const st = document.getElementById("ad-loader-status");
+  const MIN_MS = 900;      // kein Flackern
+  const MAX_MS = 10000;    // blockiert nie länger
+  let shownAt = performance.now();
+  let gen = 0;
+  let maxTimer = 0;
+  el.style.animation = "none"; // CSS-Notausgang abschalten, JS übernimmt (sonst käme er nach Login nicht wieder)
+
+  function status(text) {
+    if (st.textContent === text) return;
+    st.textContent = text;
+    st.style.animation = "none";
+    void st.offsetWidth; // Einblend-Animation neu starten
+    st.style.animation = "";
+  }
+  function done() {
+    const g = ++gen;
+    clearTimeout(maxTimer);
+    const wait = Math.max(0, MIN_MS - (performance.now() - shownAt));
+    setTimeout(() => {
+      if (g !== gen) return; // inzwischen wieder geöffnet
+      el.classList.add("is-done");
+      el.setAttribute("aria-hidden", "true");
+    }, wait);
+  }
+  function show(text) {
+    gen++;
+    if (el.classList.contains("is-done")) {
+      el.classList.remove("is-done");
+      el.removeAttribute("aria-hidden");
+      shownAt = performance.now();
+    }
+    status(text);
+    clearTimeout(maxTimer);
+    maxTimer = setTimeout(done, MAX_MS);
+  }
+  maxTimer = setTimeout(done, MAX_MS);
+  return { status, show, done };
+})();
 let map = null;
 
 /* =========================================================
@@ -145,17 +188,22 @@ function initAuth() {
     await a.signOut(auth);
   });
 
-  return loadAuth().then(({ a, auth }) => a.onAuthStateChanged(auth, async (user) => {
+  return loadAuth().then(({ a, auth }) => {
+    loader.status("Anmeldung wird geprüft …");
+    return a.onAuthStateChanged(auth, async (user) => {
     if (user && user.uid !== ADMIN_UID) {
       await a.signOut(auth);
       errEl.textContent = "Dieser Account hat keinen Admin-Zugang.";
       errEl.hidden = false;
       return;
     }
+    if (user) loader.show("Inhalte werden geladen …");
     $("#ad-login").hidden = !!user;
     $("#ad-app").hidden = !user;
     if (user) await Promise.all([loadData(), loadTeam()]);
-  }));
+    loader.done();
+    });
+  });
 }
 
 /* =========================================================
@@ -898,6 +946,7 @@ function init() {
   });
   initAuth().catch((err) => {
     console.error(err);
+    loader.done();
     const errEl = $("#ad-login-error");
     errEl.textContent = "Firebase konnte nicht geladen werden. Internet prüfen und Seite neu laden.";
     errEl.hidden = false;
