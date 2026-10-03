@@ -711,81 +711,153 @@ function initSettings() {
 
 /* =========================================================
    Team (nur im Admin sichtbar, eigenes gesperrtes Dokument)
+   Mitglieder: [{ name, photoUrl }]. Alte reine Namenslisten werden automatisch übernommen.
    ========================================================= */
-const team = { members: [], loaded: false, saving: false };
+const team = { members: [], state: "loading", error: "", saving: false, uploading: undefined };
+
+const normMember = (m) => (typeof m === "string"
+  ? { name: m.trim().slice(0, 60), photoUrl: "" }
+  : { name: String(m?.name ?? "").trim().slice(0, 60), photoUrl: URL_OK.test(String(m?.photoUrl ?? "")) ? m.photoUrl : "" });
+
+function teamErrorHtml(err) {
+  const code = err?.code ?? "";
+  if (code.includes("permission-denied")) {
+    return `<strong>Der Team-Bereich hat keine Berechtigung.</strong>
+      <span>In Firebase sind noch die alten Regeln aktiv. Firebase → Firestore Database → Regeln → die neuen Regeln (mit „admin/team“) einfügen → Veröffentlichen. Danach diese Seite neu laden.</span>`;
+  }
+  return `<strong>Team konnte nicht geladen werden.</strong><span>${esc(errorText(err))}</span>`;
+}
 
 function renderTeam() {
   const list = $("#ad-team-list");
-  $("#ad-team-import").hidden = !team.loaded || team.members.length > 0;
-  list.innerHTML = !team.loaded ? `<li class="ad-empty">Team wird geladen …</li>`
-    : team.members.length ? team.members.map((m, i) => `
-      <li class="ad-row ad-row--team" data-index="${i}">
-        <span class="ad-avatar" aria-hidden="true">${esc(m.trim().charAt(0).toUpperCase())}</span>
-        <span class="ad-row__main"><strong>${esc(m)}</strong></span>
-        <span class="ad-row__actions">
-          <button class="hb-iconbtn ad-danger" type="button" data-team-remove aria-label="${esc(m)} entfernen">${icon("trash-2")}</button>
-        </span>
-      </li>`).join("")
+  const form = $("#ad-team-form");
+  const errEl = $("#ad-team-error");
+  const ready = team.state === "ready";
+  form.querySelector("fieldset").disabled = !ready || team.saving;
+  errEl.hidden = team.state !== "error";
+  errEl.innerHTML = team.state === "error" ? team.error : "";
+  $("#ad-team-import").hidden = !ready || team.members.length > 0;
+  $("#ad-team-count").textContent = ready ? `${team.members.length} ${team.members.length === 1 ? "Mitglied" : "Mitglieder"}` : "";
+
+  if (team.state === "loading") { list.innerHTML = `<li class="ad-empty">Team wird geladen …</li>`; return; }
+  if (team.state === "error") { list.innerHTML = ""; return; }
+  list.innerHTML = team.members.length ? team.members.map((m, i) => `
+    <li class="ad-member" data-index="${i}">
+      <button type="button" class="ad-member__photo" data-team-photo aria-label="Foto für ${esc(m.name)} ${m.photoUrl ? "ändern" : "hinzufügen"}">
+        ${m.photoUrl ? imgTag(m.photoUrl, 'alt=""', 192) : `<span class="ad-member__initial" aria-hidden="true">${esc(m.name.charAt(0).toUpperCase())}</span>`}
+        <span class="ad-member__cam" aria-hidden="true">${icon("upload")}</span>
+        ${team.uploading === i ? `<span class="ad-member__busy" aria-hidden="true"></span>` : ""}
+      </button>
+      <span class="ad-member__text">
+        <strong>${esc(m.name)}</strong>
+        <span>${m.photoUrl ? "HumanityBridge-Team" : "Tippe auf den Kreis für ein Foto"}</span>
+      </span>
+      <span class="ad-member__actions">
+        <button class="hb-iconbtn" type="button" data-team-rename aria-label="${esc(m.name)} umbenennen">${icon("pencil")}</button>
+        ${m.photoUrl ? `<button class="hb-iconbtn" type="button" data-team-unphoto aria-label="Foto von ${esc(m.name)} entfernen">${icon("eye-off")}</button>` : ""}
+        <button class="hb-iconbtn ad-danger" type="button" data-team-remove aria-label="${esc(m.name)} entfernen">${icon("trash-2")}</button>
+      </span>
+      <input type="file" accept="image/*" hidden data-team-file>
+    </li>`).join("")
     : `<li class="ad-empty">Noch niemand eingetragen.</li>`;
 }
 
 async function saveTeam(next, message) {
   if (team.saving) return false;
   team.saving = true;
+  renderTeam();
   try {
     const { f, db } = await loadFirestore();
     await f.setDoc(f.doc(db, ...TEAM_DOC), { members: next, updatedAt: f.serverTimestamp() });
     team.members = next;
-    renderTeam();
     toast(message);
     return true;
   } catch (err) {
     console.error(err);
-    alert(`Team konnte nicht gespeichert werden: ${errorText(err)}`);
+    if ((err?.code ?? "").includes("permission-denied")) { team.state = "error"; team.error = teamErrorHtml(err); }
+    else alert(`Team konnte nicht gespeichert werden: ${errorText(err)}`);
     return false;
   } finally {
     team.saving = false;
+    renderTeam();
   }
 }
 
 async function loadTeam() {
-  team.loaded = false;
+  team.state = "loading";
   renderTeam();
   try {
     const { f, db } = await loadFirestore();
     const snap = await f.getDoc(f.doc(db, ...TEAM_DOC));
-    const members = snap.exists() && Array.isArray(snap.data().members) ? snap.data().members : [];
-    team.members = members.filter((m) => typeof m === "string" && m.trim()).map((m) => m.slice(0, 60));
-    team.loaded = true;
-    renderTeam();
+    const raw = snap.exists() && Array.isArray(snap.data().members) ? snap.data().members : [];
+    team.members = raw.map(normMember).filter((m) => m.name);
+    team.state = "ready";
   } catch (err) {
     console.error(err);
-    $("#ad-team-list").innerHTML = `<li class="ad-empty">${esc(errorText(err))}</li>`;
+    team.state = "error";
+    team.error = teamErrorHtml(err);
   }
+  renderTeam();
 }
 
 function initTeam() {
   const form = $("#ad-team-form");
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!team.loaded) return;
+    if (team.state !== "ready") return; // Formular ist dann gesperrt und der Grund wird angezeigt
     const name = form.member.value.trim().replace(/\s+/g, " ");
-    if (!name) { form.member.focus(); return; }
-    if (team.members.some((m) => m.toLowerCase() === name.toLowerCase())) { toast(`${name} ist schon eingetragen.`); return; }
-    if (team.members.length >= 50) { toast("Maximal 50 Namen."); return; }
-    if (await saveTeam([...team.members, name], `${name} hinzugefügt.`)) form.member.value = "";
+    if (!name) { toast("Bitte einen Namen eintragen."); form.member.focus(); return; }
+    if (team.members.some((m) => m.name.toLowerCase() === name.toLowerCase())) { toast(`${name} ist schon im Team.`); return; }
+    if (team.members.length >= 50) { toast("Maximal 50 Mitglieder."); return; }
+    if (await saveTeam([...team.members, { name, photoUrl: "" }], `${name} hinzugefügt.`)) form.member.value = "";
     form.member.focus();
   });
-  $("#ad-team-list").addEventListener("click", async (e) => {
-    const b = e.target.closest("[data-team-remove]");
-    if (!b) return;
-    const i = Number(b.closest("[data-index]").dataset.index);
-    const name = team.members[i];
-    if (!confirm(`${name} aus dem Team entfernen?`)) return;
-    await saveTeam(team.members.filter((_, k) => k !== i), `${name} entfernt.`);
+
+  const list = $("#ad-team-list");
+  list.addEventListener("click", async (e) => {
+    const item = e.target.closest("[data-index]");
+    if (!item || team.saving) return;
+    const i = Number(item.dataset.index);
+    const m = team.members[i];
+    if (e.target.closest("[data-team-photo]")) {
+      if (team.uploading === undefined) item.querySelector("[data-team-file]").click();
+      return;
+    }
+    if (e.target.closest("[data-team-remove]")) {
+      if (!confirm(`${m.name} aus dem Team entfernen?`)) return;
+      await saveTeam(team.members.filter((_, k) => k !== i), `${m.name} entfernt.`);
+    } else if (e.target.closest("[data-team-unphoto]")) {
+      await saveTeam(team.members.map((x, k) => (k === i ? { ...x, photoUrl: "" } : x)), "Foto entfernt.");
+    } else if (e.target.closest("[data-team-rename]")) {
+      const next = (prompt("Neuer Name:", m.name) ?? "").trim().replace(/\s+/g, " ").slice(0, 60);
+      if (!next || next === m.name) return;
+      if (team.members.some((x, k) => k !== i && x.name.toLowerCase() === next.toLowerCase())) { toast(`${next} ist schon im Team.`); return; }
+      await saveTeam(team.members.map((x, k) => (k === i ? { ...x, name: next } : x)), "Name geändert.");
+    }
   });
+
+  list.addEventListener("change", async (e) => {
+    const input = e.target.closest("[data-team-file]");
+    if (!input?.files?.[0]) return;
+    const i = Number(input.closest("[data-index]").dataset.index);
+    const name = team.members[i].name;
+    team.uploading = i;
+    renderTeam();
+    try {
+      const url = await processAndUpload(input.files[0], 400);
+      team.uploading = undefined;
+      await saveTeam(team.members.map((x, k) => (k === i ? { ...x, photoUrl: url } : x)), `Foto für ${name} gespeichert.`);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Foto konnte nicht hochgeladen werden.");
+    } finally {
+      team.uploading = undefined;
+      renderTeam();
+    }
+  });
+
   $("#ad-team-import").addEventListener("click", () =>
-    saveTeam([...IMPRESSUM_TEAM], "Team aus dem Impressum übernommen."));
+    saveTeam(IMPRESSUM_TEAM.map((name) => ({ name, photoUrl: "" })), "Team aus dem Impressum übernommen."));
 }
 
 /* =========================================================
