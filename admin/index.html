@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>HumanityBridge – Admin</title>
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" type="image/svg+xml" href="../assets/img/logo.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/img/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="HB Admin">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="admin.css">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" defer></script>
+  <script type="module" src="admin.js"></script>
+</head>
+<body class="ad-body">
+
+  <!-- Anmeldung -->
+  <main class="ad-login" id="ad-login">
+    <form class="ad-login__card" id="ad-login-form" novalidate>
+      <img src="../assets/img/logo.svg" alt="" width="64" height="67">
+      <h1>Admin-Bereich</h1>
+      <p class="ad-muted">Mit eurem gemeinsamen Team-Account anmelden.</p>
+      <label class="ad-field">
+        <span>E-Mail</span>
+        <input type="email" name="email" autocomplete="username" required>
+      </label>
+      <label class="ad-field">
+        <span>Passwort</span>
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <p class="ad-error" id="ad-login-error" role="alert" hidden></p>
+      <button class="hb-btn hb-btn--dark ad-btn-block" type="submit">Anmelden</button>
+      <a class="ad-link" href="../">Zur Website</a>
+    </form>
+  </main>
+
+  <!-- Dashboard -->
+  <div class="ad-app" id="ad-app" hidden>
+    <header class="ad-header">
+      <a class="hb-brand" href="../" title="Zur Website">
+        <img class="hb-brand__logo" src="../assets/img/logo.svg" alt="" width="34" height="36">
+        <span class="hb-brand__name">Admin</span>
+      </a>
+      <nav class="ad-tabs" role="tablist" aria-label="Bereiche">
+        <button type="button" role="tab" class="ad-tab" data-tab="countries" aria-selected="true">Länder</button>
+        <button type="button" role="tab" class="ad-tab" data-tab="projects" aria-selected="false">Projekte</button>
+        <button type="button" role="tab" class="ad-tab" data-tab="settings" aria-selected="false">Startseite</button>
+      </nav>
+      <div class="ad-header__actions">
+        <a class="hb-iconbtn" href="../" target="_blank" rel="noopener" aria-label="Website in neuem Tab öffnen" data-icon="external-link"></a>
+        <button class="hb-iconbtn" type="button" id="ad-logout" aria-label="Abmelden" data-icon="log-out"></button>
+      </div>
+    </header>
+
+    <div class="ad-banner" id="ad-banner" hidden></div>
+
+    <main class="ad-main">
+      <section class="ad-panel" id="panel-countries" role="tabpanel">
+        <div class="ad-panel__head">
+          <div>
+            <h2>Krisenländer</h2>
+            <p class="ad-muted">Reihenfolge = Reihenfolge auf der Startseite. Markierte Länder leuchten auf der Karte.</p>
+          </div>
+          <button class="hb-btn hb-btn--dark" type="button" id="ad-add-country"><span data-icon="plus"></span><span>Land hinzufügen</span></button>
+        </div>
+        <div class="ad-map"><div class="hb-hero__map" id="ad-map"></div></div>
+        <ul class="ad-list" id="ad-country-list"></ul>
+      </section>
+
+      <section class="ad-panel" id="panel-projects" role="tabpanel" hidden>
+        <div class="ad-panel__head">
+          <div>
+            <h2>Projekte</h2>
+            <p class="ad-muted">Das mit Stern markierte Projekt erscheint auf der Startseite.</p>
+          </div>
+          <button class="hb-btn hb-btn--dark" type="button" id="ad-add-project"><span data-icon="plus"></span><span>Projekt hinzufügen</span></button>
+        </div>
+        <ul class="ad-list" id="ad-project-list"></ul>
+      </section>
+
+      <section class="ad-panel" id="panel-settings" role="tabpanel" hidden>
+        <div class="ad-panel__head"><div><h2>Startseite</h2><p class="ad-muted">Social Media, Bilder und Spenden-Schalter.</p></div></div>
+        <form class="ad-form" id="ad-settings-form" novalidate>
+          <fieldset class="ad-group">
+            <legend>Social Media</legend>
+            <div class="ad-grid2">
+              <label class="ad-field"><span>TikTok-Link</span><input type="url" name="tiktokUrl" placeholder="https://www.tiktok.com/@…" inputmode="url"></label>
+              <label class="ad-field"><span>TikTok-Name</span><input type="text" name="tiktokHandle" placeholder="@humanitybridge" maxlength="40"></label>
+              <label class="ad-field"><span>Instagram-Link</span><input type="url" name="instagramUrl" placeholder="https://www.instagram.com/…" inputmode="url"></label>
+              <label class="ad-field"><span>Instagram-Name</span><input type="text" name="instagramHandle" placeholder="@humanitybridge" maxlength="40"></label>
+            </div>
+          </fieldset>
+          <fieldset class="ad-group">
+            <legend>Zitat unten rechts</legend>
+            <div class="ad-image" data-image="quote"></div>
+          </fieldset>
+          <fieldset class="ad-group">
+            <legend>Karte „Weitere Länder“</legend>
+            <label class="ad-field"><span>Text</span><input type="text" name="moreText" maxlength="120"></label>
+            <div class="ad-image" data-image="more"></div>
+          </fieldset>
+          <fieldset class="ad-group">
+            <legend>Spenden</legend>
+            <label class="ad-switch"><input type="checkbox" name="donationsEnabled"><span>Spenden-Buttons aktivieren</span></label>
+            <p class="ad-muted">Erst einschalten, wenn eine Spendenseite und die rechtlichen Angaben bereit sind.</p>
+          </fieldset>
+        </form>
+      </section>
+    </main>
+
+    <div class="ad-publish" id="ad-publish">
+      <p class="ad-publish__status" id="ad-status">Alles veröffentlicht</p>
+      <button class="hb-btn hb-btn--dark" type="button" id="ad-publish-btn" disabled>Veröffentlichen</button>
+    </div>
+  </div>
+
+  <!-- Editor für Land / Projekt -->
+  <dialog class="ad-dialog" id="ad-dialog" aria-labelledby="ad-dialog-title">
+    <form class="ad-form" id="ad-dialog-form" method="dialog" novalidate>
+      <div class="ad-dialog__head">
+        <h2 id="ad-dialog-title"></h2>
+        <button class="hb-iconbtn" type="button" data-close aria-label="Schließen" data-icon="x"></button>
+      </div>
+      <div class="ad-dialog__body" id="ad-dialog-body"></div>
+      <div class="ad-dialog__foot">
+        <button class="hb-btn ad-btn-ghost" type="button" data-close>Abbrechen</button>
+        <button class="hb-btn hb-btn--dark" type="submit">Übernehmen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <datalist id="ad-country-names"></datalist>
+  <div class="hb-toast" id="hb-toast" role="status" aria-live="polite"></div>
+</body>
+</html>
