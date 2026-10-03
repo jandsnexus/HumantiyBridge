@@ -1,5 +1,19 @@
 import { icon } from "./icons.js";
-import { esc, imgTag, badgeTone } from "./util.js";
+import { esc, imgTag, badgeTone, safeUrl } from "./util.js";
+
+function hostOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return ""; }
+}
+
+function sourcesHtml(sources) {
+  const items = (sources ?? []).map((q) => {
+    const url = safeUrl(q.url);
+    if (!url) return "";
+    const host = hostOf(url);
+    return `<li><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(q.title || host)}</a>${q.title && host ? `<span>${esc(host)}</span>` : ""}</li>`;
+  }).join("");
+  return items ? `<h3>Quellen</h3><ol class="hb-sources">${items}</ol>` : "";
+}
 
 const root = () => document.getElementById("hb-drawer");
 const panel = () => root().querySelector(".hb-drawer__panel");
@@ -65,6 +79,7 @@ export function openCountryReport(c) {
       <h3>Lagebericht</h3>
       ${date ? `<p class="hb-report__date">Stand: ${esc(date)}</p>` : ""}
       ${paras || `<p class="hb-empty">Für dieses Land wurde noch kein Bericht eingetragen.</p>`}
+      ${sourcesHtml(c.report?.sources)}
     </div>`);
 }
 
