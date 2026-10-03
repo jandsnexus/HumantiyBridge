@@ -1,7 +1,7 @@
 import { icon } from "./icons.js";
-import { esc, safeUrl, imgTag, badgeTone as tone } from "./util.js";
+import { esc, safeUrl, sizedUrl, imgTag, badgeTone as tone } from "./util.js";
 
-const cssUrl = (u) => `url("${safeUrl(u).replace(/"/g, "%22")}")`;
+const cssUrl = (u) => `url("${u.replace(/"/g, "%22")}")`;
 
 /* ---------- Rechter Tab: Social Media + Transparenz ---------- */
 export function renderFollow(settings) {
@@ -47,9 +47,9 @@ function countryCard(c) {
   return `
     <article class="hb-card" role="listitem">
       <div class="hb-card__media">
-        ${imgTag(c.coverUrl, 'class="hb-card__img" alt="" loading="lazy" decoding="async"')}
+        ${imgTag(c.coverUrl, 'class="hb-card__img" alt="" loading="lazy" decoding="async"', 640)}
         <div class="hb-card__head">
-          ${imgTag(c.flagUrl, `class="hb-flag" alt="Flagge ${esc(c.name)}" width="36" height="36"`) || `<span class="hb-flag hb-flag--icon">${icon("globe")}</span>`}
+          ${imgTag(c.flagUrl, `class="hb-flag" alt="Flagge ${esc(c.name)}" width="36" height="36"`, 96) || `<span class="hb-flag hb-flag--icon">${icon("globe")}</span>`}
           <div>
             <h3 class="hb-card__name">${esc(c.name)}</h3>
             ${c.badge?.text ? `<span class="hb-badge hb-badge--${tone(c.badge.tone)}">${esc(c.badge.text)}</span>` : ""}
@@ -70,7 +70,7 @@ function moreCard(more) {
   return `
     <article class="hb-card hb-card--more" role="listitem">
       <div class="hb-card__media">
-        ${imgTag(more?.coverUrl, 'class="hb-card__img" alt="" loading="lazy" decoding="async"')}
+        ${imgTag(more?.coverUrl, 'class="hb-card__img" alt="" loading="lazy" decoding="async"', 640)}
         <div class="hb-card__head">
           <span class="hb-flag hb-flag--icon">${icon("globe")}</span>
           <div>
@@ -92,6 +92,7 @@ export function renderCards(countries, more) {
   const el = document.getElementById("hb-cards");
   const items = countries.map(countryCard).join("");
   el.innerHTML = items + moreCard(more);
+  el.removeAttribute("aria-busy");
 }
 
 /* ---------- Projekt unten Mitte ---------- */
@@ -106,7 +107,7 @@ export function renderProject(p) {
   el.innerHTML = `
     <article class="hb-proj">
       <div class="hb-proj__media">
-        ${imgTag(p.thumbnailUrl, 'alt="" loading="lazy" decoding="async"')}
+        ${imgTag(p.thumbnailUrl, 'alt="" loading="lazy" decoding="async"', 760)}
         ${left ? `<span class="hb-tag hb-tag--left">${esc(left)}</span>` : ""}
         ${right ? `<span class="hb-tag hb-tag--right">${esc(right)}</span>` : ""}
       </div>
@@ -123,7 +124,7 @@ export function renderProject(p) {
 
 /* ---------- Zitat-Hintergrund ---------- */
 export function renderQuote(settings) {
-  const url = safeUrl(settings?.quoteBackgroundUrl);
+  const url = sizedUrl(settings?.quoteBackgroundUrl, 1200);
   // Direkt als Inline-Style: url() in CSS-Variablen würde relativ zur CSS-Datei aufgelöst
   document.getElementById("hb-quote").style.backgroundImage = url ? cssUrl(url) : "none";
 }
@@ -150,4 +151,14 @@ export function applyDonationState(enabled) {
     if (!enabled) btn.title = "Spenden bald verfügbar";
     else btn.removeAttribute("title");
   });
+}
+
+/* ---------- Kein Inhalt verfügbar (erster Besuch + offline oder blockiert) ---------- */
+export function renderUnavailable() {
+  const msg = "Die Inhalte konnten gerade nicht geladen werden. Bitte prüfe deine Verbindung und lade die Seite neu.";
+  document.getElementById("hb-cards").innerHTML = `<p class="hb-empty hb-empty--box">${msg}</p>`;
+  document.getElementById("hb-project").innerHTML = "";
+  renderFollow({});
+  renderFooter({});
+  applyDonationState(false);
 }
