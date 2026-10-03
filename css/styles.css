@@ -417,6 +417,16 @@ a.hb-follow__item:hover .hb-follow__icon { background: #e3eaf4; }
 .hb-legal h2 { font-size: 17px; font-weight: 700; }
 .hb-legal p, .hb-legal li { font-size: 15px; line-height: 1.7; color: #334155; }
 .hb-legal__team { display: grid; gap: 2px; }
+.hb-legal__lead { font-size: 16px; line-height: 1.7; color: #334155; }
+.hb-legal a { color: #1d55c4; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; } /* dunkleres Blau: Kontrast ≥ 4,5:1 */
+.hb-legal a:hover { color: var(--ink); }
+.hb-legal__toc { padding: 16px 20px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
+.hb-legal__toc ol { display: grid; gap: 4px; padding-left: 20px; list-style: decimal; font-size: 14px; }
+.hb-legal__list { display: grid; gap: 8px; padding-left: 20px; list-style: disc; }
+.hb-legal code { font-size: .9em; padding: 1px 5px; border-radius: 4px; background: var(--soft); overflow-wrap: anywhere; }
+.hb-legal__date { font-size: 13px; color: var(--muted); }
+.hb-legal section { scroll-margin-top: calc(var(--header-h) + 16px); }
+.hb-footer__links a[aria-current="page"] { color: var(--muted); text-decoration: none; }
 /* Platzhalter: vor dem Livegang ersetzen */
 .hb-todo { background: #fff3bf; border: 1px dashed #e0b400; border-radius: 4px; padding: 0 6px; color: #7a5a00; font-weight: 600; }
 @media (max-width: 900px) { .hb-legal { padding: 28px 16px 40px; } .hb-legal h1 { font-size: 26px; } }
