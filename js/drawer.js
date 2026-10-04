@@ -5,6 +5,7 @@
  */
 import { icon } from "./icons.js";
 import { esc, imgTag, badgeTone, safeUrl } from "./util.js";
+import { weeklyMeta } from "./render.js";
 
 const root = () => document.getElementById("hb-drawer");
 const panel = () => root().querySelector(".hb-drawer__panel");
@@ -108,6 +109,40 @@ export function openCountryReport(c) {
         <div class="hb-report__text">
           ${paras || `<p class="hb-empty">Für dieses Land wurde noch kein Bericht eingetragen.</p>`}
         </div>
+      </section>
+
+      ${count ? `
+      <section class="hb-tabpanel" role="tabpanel" id="hb-panel-sources" aria-labelledby="hb-tab-sources" tabindex="0" hidden>
+        <p class="hb-report__date">Die Angaben in diesem Bericht stützen sich auf folgende Quellen. Externe Links öffnen sich in einem neuen Tab.</p>
+        <ol class="hb-sources">${sources}</ol>
+      </section>` : ""}
+    </div>`);
+}
+
+/** Wochenbericht im Zeitungsstil: Foto, Überschrift, optionale Statistiken, Tabs „Bericht“ / „Quellen“. */
+export function openWeekly(w) {
+  const stats = (w.stats ?? []).map((st) => `
+    <li>${icon(st.icon || "chart-pie")}<span><strong>${esc(st.value)}</strong><small>${esc(st.label)}</small></span></li>`).join("");
+  const paras = (w.paragraphs ?? []).map((p) => `<p>${esc(p)}</p>`).join("");
+  const sources = sourcesPanel(w.sources);
+  const count = (w.sources ?? []).filter((q) => safeUrl(q.url)).length;
+  const img = imgTag(w.imageUrl, 'alt=""', 1200);
+
+  open(`
+    ${img ? `<figure class="hb-report__media hb-report__media--weekly">${img}${w.imageCredit ? `<figcaption class="hb-report__credit">${esc(w.imageCredit)}</figcaption>` : ""}</figure>` : ""}
+    <div class="hb-report__content hb-report__content--weekly">
+      <p class="hb-weekly__kicker">${icon("file-text")}<span>${esc(weeklyMeta(w.date))}</span></p>
+      <h2 class="hb-report__headline" id="hb-drawer-title">${esc(w.title)}</h2>
+      ${w.teaser ? `<p class="hb-report__lead">${esc(w.teaser)}</p>` : ""}
+      ${stats ? `<ul class="hb-report__stats">${stats}</ul>` : ""}
+
+      <div class="hb-tabs" role="tablist" aria-label="Bericht und Quellen">
+        <button type="button" role="tab" class="hb-tab" id="hb-tab-report" aria-controls="hb-panel-report" aria-selected="true">Bericht</button>
+        ${count ? `<button type="button" role="tab" class="hb-tab" id="hb-tab-sources" aria-controls="hb-panel-sources" aria-selected="false" tabindex="-1">Quellen <span class="hb-tab__count">${count}</span></button>` : ""}
+      </div>
+
+      <section class="hb-tabpanel" role="tabpanel" id="hb-panel-report" aria-labelledby="hb-tab-report" tabindex="0">
+        <div class="hb-report__text">${paras}</div>
       </section>
 
       ${count ? `
