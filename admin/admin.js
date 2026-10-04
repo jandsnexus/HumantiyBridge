@@ -7,7 +7,7 @@ import { loadAuth, loadFirestore } from "../js/firebase.js";
 import { SAMPLE_DATA, STAT_ICONS, PROJECT_TAGS, flagUrlFor } from "../js/sample-data.js";
 import { createMap } from "../js/map.js";
 import { icon } from "../js/icons.js";
-import { esc, imgTag, hydrateIcons, toast, safeColor, socialUrl } from "../js/util.js";
+import { esc, imgTag, hydrateIcons, toast, safeColor, socialUrl, completeUrl } from "../js/util.js";
 import { matchCountry, byKey, countryNames } from "./country-match.js";
 import { processAndUpload } from "./upload.js";
 
@@ -295,24 +295,46 @@ async function loadData() {
   }
 }
 
+/* ---------- Warum nicht veröffentlicht wurde: bleibt sichtbar, bis es behoben ist ---------- */
+let publishErrorTarget = null;
+
+function showPublishError(text, tab, field) {
+  publishErrorTarget = { tab, field };
+  $("#ad-publish-error-text").textContent = text;
+  $("#ad-publish-error").hidden = false;
+  goToPublishError();
+}
+
+function clearPublishError() {
+  publishErrorTarget = null;
+  $("#ad-publish-error").hidden = true;
+}
+
+function goToPublishError() {
+  if (!publishErrorTarget) return;
+  const { tab, field } = publishErrorTarget;
+  document.querySelector(`.ad-tab[data-tab="${tab}"]`)?.click();
+  if (field && document.contains(field)) {
+    field.classList.add("is-invalid");
+    field.scrollIntoView({ block: "center", behavior: "smooth" });
+    field.focus({ preventScroll: true });
+  }
+}
+
 async function publish() {
   if (!state.dirty || state.busy || state.uploads > 0) return;
+  clearPublishError();
   const badSource = weeklyInvalidSource();
   if (badSource) {
-    document.querySelector('.ad-tab[data-tab="weekly"]').click();
-    badSource.classList.add("is-invalid");
-    badSource.focus();
-    toast("Bitte im Wochenbericht einen vollständigen Quellen-Link mit https:// eintragen.");
+    showPublishError(badSource.message, "weekly", badSource.field);
     return;
   }
   for (const platform of ["tiktok", "instagram"]) {
     const url = state.data.settings.socials[platform].url;
     if (url && !socialUrl(url, platform)) {
-      document.querySelector('.ad-tab[data-tab="settings"]').click();
       const form = $("#ad-settings-form");
       checkSocialField(form, platform);
-      form.elements.namedItem(`${platform}Url`).focus();
-      toast(`Bitte zuerst den ${SOCIAL_LABEL[platform]}-Link korrigieren.`);
+      showPublishError(`Nicht veröffentlicht: Der ${SOCIAL_LABEL[platform]}-Link (Tab „Startseite“) ist ungültig. Profil-Link aus der App kopieren oder nur @euername eintragen.`, "settings", form.elements.namedItem(`${platform}Url`));
       return;
     }
   }
@@ -339,6 +361,7 @@ async function publish() {
     await f.setDoc(ref, { ...clone(state.data), rev, updatedAt: f.serverTimestamp() });
     state.rev = rev;
     state.busy = false;
+    clearPublishError();
     setDirty(false);
     toast("Veröffentlicht. Die Startseite ist aktualisiert.");
   } catch (err) {
@@ -618,12 +641,13 @@ function openCountryEditor(existing) {
     for (const row of form.querySelectorAll(".ad-source")) {
       const title = row.querySelector("[data-src-title]").value.trim();
       const urlEl = row.querySelector("[data-src-url]");
+      fixSourceUrl(urlEl);
       const url = urlEl.value.trim();
       if (!title && !url) continue;
       if (!URL_OK.test(url)) {
         urlEl.classList.add("is-invalid");
         urlEl.focus();
-        toast("Bitte einen vollständigen Link mit https:// eintragen.");
+        toast(url ? "Dieser Quellen-Link ist ungültig. Bitte eine Web-Adresse wie unocha.org/sudan eintragen." : "Bei dieser Quelle fehlt der Link. Link ergänzen oder Quelle entfernen.");
         return false;
       }
       sources.push({ title, url });
@@ -670,6 +694,7 @@ function openCountryEditor(existing) {
     addSourceBtn.hidden = sourcesEl.children.length >= MAX_SOURCES;
   });
   sourcesEl.addEventListener("input", (e) => e.target.classList.remove("is-invalid"));
+  sourcesEl.addEventListener("focusout", (e) => { if (e.target.matches("[data-src-url]")) fixSourceUrl(e.target); }, { signal: dialogSignal() });
 
   const flagField = imageField($("#ad-img-flag"), {
     label: "Flagge (wird automatisch gesetzt, eigene optional)", value: c.flagUrl, maxSize: 256, ratio: "square",
@@ -829,6 +854,16 @@ function renderSettings() {
 }
 
 const SOCIAL_LABEL = { tiktok: "TikTok", instagram: "Instagram" };
+
+/** Quellen-Link-Feld vervollständigen. true = geändert. Markiert ungültige Eingaben rot. */
+function fixSourceUrl(input) {
+  const v = input.value.trim();
+  if (!v) { input.classList.remove("is-invalid"); return false; }
+  const full = completeUrl(v);
+  input.classList.toggle("is-invalid", !full);
+  if (full && full !== input.value) { input.value = full; return true; }
+  return false;
+}
 
 /** Prüft/vervollständigt ein Social-Feld. Gibt false zurück, wenn der Inhalt ungültig ist. */
 function checkSocialField(form, platform) {
@@ -1336,10 +1371,10 @@ function initWeekly() {
   }
   form.addEventListener("input", (e) => onWeeklyField(e.target));
   form.addEventListener("change", (e) => onWeeklyField(e.target));
+  // Quellen-Link beim Verlassen vervollständigen ("www.unocha.org" → "https://www.unocha.org/")
   form.addEventListener("focusout", (e) => {
     if (!e.target.matches("[data-src-url]")) return;
-    const v = e.target.value.trim();
-    e.target.classList.toggle("is-invalid", !!v && !URL_OK.test(v));
+    if (fixSourceUrl(e.target)) collectWeeklySources();
   });
   $("#ad-weekly-add-source").addEventListener("click", () => {
     $("#ad-weekly-sources").insertAdjacentHTML("beforeend", weeklySourceRow());
@@ -1355,11 +1390,23 @@ function initWeekly() {
   });
 }
 
-/** Vor dem Veröffentlichen: ungültige Quellen-Links im Wochenbericht melden. */
+/**
+ * Vor dem Veröffentlichen: Quellen im Wochenbericht vervollständigen und prüfen.
+ * @returns {{ field: HTMLElement, message: string } | null}
+ */
 function weeklyInvalidSource() {
   const rows = [...$("#ad-weekly-sources").querySelectorAll(".ad-source")];
-  return rows.map((r) => r.querySelector("[data-src-url]")).find((inp) => inp.value.trim() && !URL_OK.test(inp.value.trim()))
-    || rows.map((r) => r.querySelector("[data-src-url]")).find((inp) => !inp.value.trim() && inp.closest(".ad-source").querySelector("[data-src-title]").value.trim());
+  rows.forEach((r) => fixSourceUrl(r.querySelector("[data-src-url]")));
+  collectWeeklySources();
+  for (const [i, row] of rows.entries()) {
+    const title = row.querySelector("[data-src-title]").value.trim();
+    const urlEl = row.querySelector("[data-src-url]");
+    const url = urlEl.value.trim();
+    if (!title && !url) continue;
+    if (!url) return { field: urlEl, message: `Nicht veröffentlicht: Im Wochenbericht hat Quelle ${i + 1} („${title}“) keinen Link. Link ergänzen oder die Quelle mit dem Mülleimer entfernen.` };
+    if (!URL_OK.test(url)) return { field: urlEl, message: `Nicht veröffentlicht: Im Wochenbericht ist der Link von Quelle ${i + 1} ungültig („${url}“). Bitte eine Web-Adresse wie unocha.org/sudan eintragen.` };
+  }
+  return null;
 }
 
 /* =========================================================
@@ -1397,6 +1444,7 @@ function init() {
   $("#ad-add-country").addEventListener("click", () => openCountryEditor(null));
   $("#ad-add-project").addEventListener("click", () => openProjectEditor(null));
   $("#ad-publish-btn").addEventListener("click", publish);
+  $("#ad-publish-error-go").addEventListener("click", goToPublishError);
   window.addEventListener("beforeunload", (e) => {
     if (state.dirty || state.uploads > 0) { e.preventDefault(); e.returnValue = ""; }
   });
