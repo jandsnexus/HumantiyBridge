@@ -1,7 +1,7 @@
 import { subscribeSiteData } from "./data.js";
 import { hydrateIcons, toast } from "./util.js";
-import { renderFollow, renderCards, renderProject, renderQuote, renderFooter, applyDonationState, renderUnavailable } from "./render.js";
-import { initDrawer, openCountryReport, openProject, openCountryList } from "./drawer.js";
+import { renderFollow, renderCards, renderProject, renderQuote, renderFooter, applyDonationState, renderUnavailable, renderWeekly } from "./render.js";
+import { initDrawer, openCountryReport, openProject, openCountryList, openWeekly } from "./drawer.js";
 import { createMap } from "./map.js";
 import { initLoader } from "./loader.js";
 import { initScrollSpy, initSearch } from "./nav.js";
@@ -22,6 +22,7 @@ function render(data) {
   }
   site = data;
   renderFollow(data.settings);
+  renderWeekly(data.settings?.weekly);
   renderCards(data.countries, data.moreCountries);
   renderProject(data.featuredProject);
   renderQuote(data.settings);
@@ -46,6 +47,10 @@ function onDocumentClick(e) {
 
   if (e.target.closest("[data-open-countries]")) {
     if (site) openCountryList(site.countries);
+    return;
+  }
+  if (e.target.closest("[data-open-weekly]")) {
+    if (site?.settings?.weekly?.show) openWeekly(site.settings.weekly);
     return;
   }
   if (e.target.closest("[data-open-project]")) {
