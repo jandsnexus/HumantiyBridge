@@ -90,3 +90,24 @@ export function socialUrl(input, platform) {
   if (!cfg.hosts.test(url.host + url.pathname.slice(0, 1))) return "";
   return url.href;
 }
+
+/**
+ * Link vervollständigen: "www.unocha.org" oder "unocha.org/sudan" → "https://…".
+ * Gibt "" zurück, wenn es kein gültiger Web-Link ist (z. B. Leerzeichen, "javascript:").
+ */
+export function completeUrl(input) {
+  const v = String(input ?? "").trim();
+  if (!v || /\s/.test(v)) return "";
+  let full = v;
+  if (!/^https?:\/\//i.test(v)) {
+    if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#].*)?$/i.test(v)) return "";
+    full = `https://${v}`;
+  }
+  try {
+    const u = new URL(full);
+    if (!/^https?:$/.test(u.protocol) || !u.hostname.includes(".")) return "";
+    return u.href;
+  } catch (e) {
+    return "";
+  }
+}
