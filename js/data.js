@@ -14,6 +14,31 @@ const arr = (v) => (Array.isArray(v) ? v : []);
 const str = (v) => (typeof v === "string" ? v : "");
 const paragraphs = (text) => str(text).split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
 
+/**
+ * Wochenbericht. Erscheint nur, wenn im Admin eingeschaltet UND Überschrift + Text vorhanden sind.
+ * Statistiken und Quellen sind optional; leere werden weggelassen.
+ */
+function normalizeWeekly(w) {
+  const r = w && typeof w === "object" ? w : {};
+  const out = {
+    title: str(r.title).trim(),
+    date: str(r.date),
+    imageUrl: str(r.imageUrl),
+    imageCredit: str(r.imageCredit).trim(),
+    teaser: str(r.teaser).trim(),
+    paragraphs: paragraphs(r.text),
+    stats: arr(r.stats).slice(0, 3)
+      .map((st) => ({ icon: str(st?.icon), value: str(st?.value).trim(), label: str(st?.label).trim() }))
+      .filter((st) => st.value || st.label),
+    sources: arr(r.sources)
+      .map((q) => ({ title: str(q?.title).slice(0, 120), url: str(q?.url).trim() }))
+      .filter((q) => /^https?:\/\/\S+\.\S+/i.test(q.url))
+      .slice(0, 10)
+  };
+  out.show = r.visible === true && !!out.title && out.paragraphs.length > 0;
+  return out;
+}
+
 /** Bringt gespeicherte Daten (egal wie unvollständig) in die Form, die die Startseite rendert. */
 export function normalizeSite(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
@@ -28,7 +53,8 @@ export function normalizeSite(raw) {
         tiktok: { url: str(s.socials?.tiktok?.url), handle: str(s.socials?.tiktok?.handle) },
         instagram: { url: str(s.socials?.instagram?.url), handle: str(s.socials?.instagram?.handle) }
       },
-      quoteBackgroundUrl: str(s.quoteBackgroundUrl)
+      quoteBackgroundUrl: str(s.quoteBackgroundUrl),
+      weekly: normalizeWeekly(s.weekly)
     },
     countries: arr(r.countries)
       .filter((c) => c && c.visible !== false && str(c.name) && str(c.id))
