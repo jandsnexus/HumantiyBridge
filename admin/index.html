@@ -73,6 +73,7 @@
         <button type="button" role="tab" class="ad-tab" data-tab="countries" aria-selected="true">Länder</button>
         <button type="button" role="tab" class="ad-tab" data-tab="projects" aria-selected="false">Projekte</button>
         <button type="button" role="tab" class="ad-tab" data-tab="settings" aria-selected="false">Startseite</button>
+        <button type="button" role="tab" class="ad-tab" data-tab="weekly" aria-selected="false">Wochenbericht</button>
         <button type="button" role="tab" class="ad-tab" data-tab="team" aria-selected="false">Team</button>
       </nav>
       <div class="ad-header__actions">
@@ -134,6 +135,45 @@
             <legend>Spenden</legend>
             <label class="ad-switch"><input type="checkbox" name="donationsEnabled"><span>Spenden-Buttons aktivieren</span></label>
             <p class="ad-muted">Erst einschalten, wenn eine Spendenseite und die rechtlichen Angaben bereit sind.</p>
+          </fieldset>
+        </form>
+      </section>
+
+      <section class="ad-panel" id="panel-weekly" role="tabpanel" hidden>
+        <div class="ad-panel__head">
+          <div>
+            <h2>Wochenbericht</h2>
+            <p class="ad-muted">Erscheint auf der Startseite zwischen Social Media und den Krisenländern – nur wenn er eingeschaltet ist und Überschrift und Text vorhanden sind. Sonst bleibt die Seite wie sie ist.</p>
+          </div>
+        </div>
+        <div class="ad-weekly-status" id="ad-weekly-status" role="status" aria-live="polite"></div>
+        <form class="ad-form" id="ad-weekly-form" novalidate>
+          <fieldset class="ad-group">
+            <legend>Anzeige</legend>
+            <label class="ad-switch"><input type="checkbox" name="wVisible"><span>Wochenbericht auf der Website anzeigen</span></label>
+          </fieldset>
+          <fieldset class="ad-group">
+            <legend>Kopf</legend>
+            <label class="ad-field"><span>Überschrift</span><input type="text" name="wTitle" maxlength="120" autocomplete="off" placeholder="z. B. Hilfe erreicht erste Dörfer im Norden"></label>
+            <div class="ad-grid2">
+              <label class="ad-field"><span>Datum</span><input type="date" name="wDate"></label>
+              <label class="ad-field"><span>Bildnachweis (optional)</span><input type="text" name="wCredit" maxlength="150" autocomplete="off" placeholder="z. B. Foto: UNICEF"></label>
+            </div>
+            <div class="ad-image" data-image="weekly"></div>
+            <label class="ad-field"><span>Vorspann (kurz, erscheint auf der Startseite)</span><textarea name="wTeaser" rows="3" maxlength="320"></textarea></label>
+          </fieldset>
+          <fieldset class="ad-group">
+            <legend>Bericht</legend>
+            <label class="ad-field"><span>Text (Absätze mit Leerzeile trennen)</span><textarea name="wText" rows="12" maxlength="20000"></textarea></label>
+          </fieldset>
+          <fieldset class="ad-group">
+            <legend>Statistiken (optional – leere werden nicht angezeigt)</legend>
+            <div class="ad-weekly-stats" id="ad-weekly-stats"></div>
+          </fieldset>
+          <fieldset class="ad-group">
+            <legend>Quellen (optional, max. 10)</legend>
+            <div class="ad-sources" id="ad-weekly-sources"></div>
+            <button type="button" class="hb-btn ad-btn-ghost hb-btn--sm ad-sources__add" id="ad-weekly-add-source"><span data-icon="plus"></span><span>Quelle hinzufügen</span></button>
           </fieldset>
         </form>
       </section>
