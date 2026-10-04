@@ -170,7 +170,49 @@ export function renderUnavailable() {
   const msg = "Die Inhalte konnten gerade nicht geladen werden. Bitte prüfe deine Verbindung und lade die Seite neu.";
   document.getElementById("hb-cards").innerHTML = `<p class="hb-empty hb-empty--box">${msg}</p>`;
   document.getElementById("hb-project").innerHTML = "";
+  renderWeekly(null);
   renderFollow({});
   renderFooter({});
   applyDonationState(false);
+}
+
+/* ---------- Wochenbericht (zwischen Social-Media-Bereich und Krisenländern) ---------- */
+/** ISO-Kalenderwoche */
+export function isoWeek(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil(((t - yearStart) / 86400000 + 1) / 7);
+}
+
+export function weeklyMeta(dateStr) {
+  const d = dateStr ? new Date(`${dateStr}T12:00:00`) : null;
+  if (!d || isNaN(d)) return "Wochenbericht";
+  const date = d.toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" });
+  return `Wochenbericht · KW ${isoWeek(d)} · ${date}`;
+}
+
+export function renderWeekly(w) {
+  const el = document.getElementById("wochenbericht");
+  if (!w || !w.show) { // ausgeschaltet oder ohne Text: Bereich existiert sichtbar gar nicht
+    el.hidden = true;
+    el.innerHTML = "";
+    return;
+  }
+  const img = imgTag(w.imageUrl, 'class="hb-weekly__img" alt="" loading="lazy" decoding="async"', 900);
+  el.classList.toggle("hb-weekly--noimg", !img);
+  el.innerHTML = `
+    <article class="hb-weekly__card">
+      ${img ? `<div class="hb-weekly__media">${img}</div>` : ""}
+      <div class="hb-weekly__body">
+        <p class="hb-weekly__kicker">${icon("file-text")}<span>${esc(weeklyMeta(w.date))}</span></p>
+        <h2 class="hb-weekly__title" id="hb-weekly-title">${esc(w.title)}</h2>
+        ${w.teaser ? `<p class="hb-weekly__teaser">${esc(w.teaser)}</p>` : ""}
+        <button class="hb-weekly__cta" type="button" data-open-weekly>
+          <span>Bericht lesen</span>${icon("arrow-right")}
+        </button>
+      </div>
+    </article>`;
+  el.hidden = false;
 }
