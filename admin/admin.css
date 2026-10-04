@@ -20,7 +20,7 @@
 }
 /* Buttons, die auf der hellen Startseite dunkel sind, werden hier blau */
 .ad-body .hb-btn--dark { background: var(--blue-strong); color: #fff; }
-.ad-body .hb-btn--dark:hover { background: #4682f3; }
+.ad-body .hb-btn--dark:hover { background: #2358cf; } /* dunkler statt heller: Kontrast bleibt ≥ 4,5:1 */
 .ad-body .hb-iconbtn:hover { background: var(--soft); }
 .ad-body .hb-toast { background: #1d3150; color: #fff; border: 1px solid var(--line-strong); }
 .ad-body .hb-badge--grey { background: var(--soft); color: var(--ink); }
@@ -292,7 +292,7 @@
 .ad-confirm__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
 .ad-confirm__actions .hb-btn { width: 100%; }
 .ad-confirm.is-danger #ad-confirm-yes { background: #d9363e; }
-.ad-confirm.is-danger #ad-confirm-yes:hover { background: #ec4850; }
+.ad-confirm.is-danger #ad-confirm-yes:hover { background: #b92d34; }
 
 .ad-team-form fieldset { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
 .ad-team-form fieldset:disabled { opacity: .5; }
@@ -442,3 +442,14 @@
 .ad-weekly-status.is-off { color: var(--muted); }
 .ad-weekly-status strong { color: #fff; }
 .ad-weekly-stats { display: grid; gap: 10px; }
+
+/* ---------- Veröffentlichen: sichtbarer Grund, warum nicht veröffentlicht wurde ---------- */
+.ad-publish { flex-wrap: wrap; }
+.ad-publish__error {
+  flex: 1 1 100%; order: -1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; border-radius: var(--radius); background: #2a1520; border: 1px solid #6b2a3a; color: #ffc9d0; font-size: 13.5px; line-height: 1.45;
+}
+.ad-publish__error[hidden] { display: none; }
+.ad-publish__error > span:first-child .hb-icon { width: 18px; height: 18px; color: #ff8f94; }
+.ad-publish__error #ad-publish-error-text { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.ad-main { padding-bottom: 180px; } /* Platz, damit die Leiste mit Fehlermeldung nichts verdeckt */
