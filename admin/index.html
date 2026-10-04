@@ -202,6 +202,11 @@
     </main>
 
     <footer class="ad-publish" id="ad-publish" aria-label="Veröffentlichen">
+      <div class="ad-publish__error" id="ad-publish-error" role="alert" hidden>
+        <span data-icon="triangle-alert"></span>
+        <span id="ad-publish-error-text"></span>
+        <button class="hb-btn ad-btn-ghost hb-btn--sm" type="button" id="ad-publish-error-go">Zum Fehler</button>
+      </div>
       <p class="ad-publish__status" id="ad-status" aria-live="polite">Alles veröffentlicht</p>
       <button class="hb-btn hb-btn--dark" type="button" id="ad-publish-btn" disabled>Veröffentlichen</button>
     </footer>
