@@ -346,6 +346,42 @@ a.hb-follow__item:hover .hb-follow__icon { background: #e3eaf4; }
 .hb-card__cta { margin-top: auto; align-self: flex-start; }
 .hb-card__cta::after { content: ""; position: absolute; inset: 0; } /* ganze Karte klickbar */
 
+/* ---------- 10b Wochenbericht (zwischen Social Media und Krisenländern) ---------- */
+.hb-weekly { grid-column: 1 / -1; margin: 6px 0 0 28px; min-width: 0; }
+.hb-weekly[hidden] { display: none; }
+.hb-weekly__card {
+  display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.45fr);
+  border-radius: 12px; overflow: hidden; color: #e8eef8;
+  background: linear-gradient(135deg, #13223b 0%, #0f1b2d 100%);
+  border: 1px solid #22344f; box-shadow: var(--shadow);
+}
+.hb-weekly--noimg .hb-weekly__card { grid-template-columns: minmax(0, 1fr); }
+.hb-weekly__media { position: relative; min-height: 230px; background: #1b2a42; }
+.hb-weekly__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.hb-weekly__body { display: grid; align-content: center; gap: 12px; padding: 28px 32px; min-width: 0; }
+.hb-weekly__kicker { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #8fb8ff; line-height: 1.4; }
+.hb-weekly__kicker .hb-icon { width: 15px; height: 15px; margin-top: 1px; }
+.hb-weekly__kicker span { min-width: 0; overflow-wrap: anywhere; }
+.hb-weekly__title { font-family: var(--serif); font-weight: 600; font-size: clamp(22px, 1.4vw + 12px, 30px); line-height: 1.22; letter-spacing: -.005em; color: #fff; overflow-wrap: anywhere; hyphens: auto; }
+.hb-weekly__teaser { font-family: var(--serif); font-size: 16.5px; line-height: 1.6; color: #c9d6ea; max-width: 70ch; overflow-wrap: anywhere; }
+.hb-weekly__cta {
+  justify-self: start; display: inline-flex; align-items: center; gap: 8px; height: 38px; margin-top: 4px; padding: 0 16px;
+  border-radius: 999px; border: 1px solid rgba(255, 255, 255, .32); color: #fff; font-size: 13.5px; font-weight: 600;
+  transition: background-color .15s, border-color .15s;
+}
+.hb-weekly__cta:hover { background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .55); }
+.hb-weekly__cta .hb-icon { width: 16px; height: 16px; }
+
+/* Wochenbericht im Bericht-Fenster */
+.hb-report__media--weekly { margin: 0; }
+.hb-report__credit {
+  position: absolute; z-index: 1; right: 14px; bottom: 10px; left: 14px; text-align: right;
+  font-size: 11.5px; color: rgba(255, 255, 255, .8); overflow-wrap: anywhere;
+}
+.hb-report__headline { font-family: var(--serif); font-weight: 600; font-size: clamp(24px, 2vw + 14px, 32px); line-height: 1.2; color: #fff; padding-right: 44px; overflow-wrap: anywhere; hyphens: auto; }
+.hb-drawer__body > .hb-report__content--weekly:first-child { padding-top: 64px; } /* ohne Foto: Platz für das X */
+.hb-report__media--weekly + .hb-report__content--weekly .hb-report__headline { padding-right: 0; }
+
 /* ---------- 11 Unterer Bereich ---------- */
 .hb-bottom {
   display: grid;
@@ -575,6 +611,7 @@ html.hb-modal-open { overflow: hidden; }
   .hb-follow__list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 20px; }
   .hb-follow__list li + li { border-top: 0; }
   .hb-crisis { padding-left: 0; }
+  .hb-weekly { margin-left: 0; }
   .hb-main { padding-left: 24px; }
   .hb-bottom { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .hb-steps { grid-column: 1 / -1; }
@@ -650,6 +687,10 @@ html.hb-modal-open { overflow: hidden; }
 
 /* Nur auf Handys: Länderkarten als Wisch-Reihe (nächste Karte lugt hervor) */
 @media (max-width: 600px) {
+  .hb-weekly__card { grid-template-columns: minmax(0, 1fr); }
+  .hb-weekly__media { min-height: 0; aspect-ratio: 16 / 9; }
+  .hb-weekly__body { padding: 20px 18px 22px; gap: 10px; }
+  .hb-weekly__teaser { font-size: 16px; }
   .hb-cards {
     grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(78%, 1fr); grid-auto-rows: auto;
     overflow-x: auto; margin: 0 -16px; padding: 0 16px 6px; scroll-padding: 0 16px;
