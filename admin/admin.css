@@ -302,7 +302,9 @@
 /* ---------- Handy ---------- */
 @media (max-width: 720px) {
   .ad-header { flex-wrap: wrap; height: auto; padding: 10px 12px; gap: 8px; }
-  .ad-tabs { order: 3; width: 100%; margin: 0; }
+  /* Alle Tabs immer sichtbar: am Handy in zwei Zeilen umbrechen statt seitlich zu verschwinden */
+  .ad-tabs { order: 3; width: 100%; margin: 0; flex-wrap: wrap; justify-content: center; overflow: visible; row-gap: 6px; }
+  .ad-tab { padding: 7px 12px; font-size: 13.5px; }
   .ad-header__actions { margin-left: auto; }
   .ad-grid2 { grid-template-columns: minmax(0, 1fr); }
   .ad-stat { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -431,3 +433,12 @@
   animation: ad-sweep 1.4s ease-in-out infinite;
 }
 @keyframes ad-sweep { from { transform: translateX(-110%); } to { transform: translateX(250%); } }
+
+/* ---------- Wochenbericht ---------- */
+.ad-weekly-status { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--radius); font-size: 14px; line-height: 1.5; border: 1px solid var(--line); background: var(--surface); }
+.ad-weekly-status .hb-icon { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+.ad-weekly-status.is-on { background: #0f2a1d; border-color: #1d5236; color: #b7f5cf; }
+.ad-weekly-status.is-warn { background: #2a2210; border-color: #6b5418; color: #fde7a8; }
+.ad-weekly-status.is-off { color: var(--muted); }
+.ad-weekly-status strong { color: #fff; }
+.ad-weekly-stats { display: grid; gap: 10px; }
