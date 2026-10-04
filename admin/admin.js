@@ -21,8 +21,13 @@ const MAX_SOURCES = 10;
 const TEAM_DOC = ["admin", "team"];   // nur für den Admin-Account lesbar, nie auf der Website
 const IMPRESSUM_TEAM = ["Samreen Singh", "Hassan Rashid", "Gülseher Aydin", "Nezha Khechab", "Tuana Eda Uğur", "Yunus Emre Karaus"];
 
+const EMPTY_WEEKLY = () => ({
+  visible: false, title: "", date: "", imageUrl: "", imageCredit: "", teaser: "", text: "",
+  stats: [0, 1, 2].map(() => ({ icon: "users", value: "", label: "" })), sources: []
+});
+
 const EMPTY = () => ({
-  settings: { donationsEnabled: false, socials: { tiktok: { url: "", handle: "" }, instagram: { url: "", handle: "" } }, quoteBackgroundUrl: "" },
+  settings: { donationsEnabled: false, socials: { tiktok: { url: "", handle: "" }, instagram: { url: "", handle: "" } }, quoteBackgroundUrl: "", weekly: EMPTY_WEEKLY() },
   countries: [],
   moreCountries: { text: "", coverUrl: "" },
   projects: []
@@ -131,6 +136,20 @@ function sanitize(raw) {
     d.settings.socials[k] = { url: socialUrl(rawUrl, k) || rawUrl, handle: s(st.socials?.[k]?.handle, 40) };
   }
   d.settings.quoteBackgroundUrl = s(st.quoteBackgroundUrl, 500);
+  // Wochenbericht (liegt in "settings", damit die Firestore-Regeln unverändert bleiben)
+  const wk = st.weekly && typeof st.weekly === "object" ? st.weekly : {};
+  d.settings.weekly = {
+    visible: wk.visible === true,
+    title: s(wk.title, 120), date: s(wk.date, 10), imageUrl: s(wk.imageUrl, 500), imageCredit: s(wk.imageCredit, 150),
+    teaser: s(wk.teaser, 320), text: s(wk.text, 20000),
+    stats: [0, 1, 2].map((i) => ({
+      icon: STAT_ICONS[wk.stats?.[i]?.icon] ? wk.stats[i].icon : "users",
+      value: s(wk.stats?.[i]?.value, 30), label: s(wk.stats?.[i]?.label, 60)
+    })),
+    sources: (Array.isArray(wk.sources) ? wk.sources : [])
+      .map((q) => ({ title: s(q?.title, 120), url: s(q?.url, 500).trim() }))
+      .filter((q) => URL_OK.test(q.url)).slice(0, MAX_SOURCES)
+  };
   d.moreCountries = { text: s(r.moreCountries?.text, 120), coverUrl: s(r.moreCountries?.coverUrl, 500) };
   d.countries = (Array.isArray(r.countries) ? r.countries : []).filter((c) => c && c.id && c.name).map((c) => ({
     id: s(c.id, 80), name: s(c.name, 60), isoNumeric: s(c.isoNumeric, 40), flagCode: s(c.flagCode, 4),
@@ -165,6 +184,7 @@ function setDirty(on = true) {
   btn.disabled = !on || state.busy || state.uploads > 0;
   status.textContent = state.uploads > 0 ? "Bild wird hochgeladen …"
     : on ? "Nicht veröffentlichte Änderungen" : "Alles veröffentlicht";
+  if (document.getElementById("ad-weekly-status")) weeklyStatus(); // Statuszeile im Wochenbericht aktuell halten
 }
 
 function errorText(err) {
@@ -277,6 +297,14 @@ async function loadData() {
 
 async function publish() {
   if (!state.dirty || state.busy || state.uploads > 0) return;
+  const badSource = weeklyInvalidSource();
+  if (badSource) {
+    document.querySelector('.ad-tab[data-tab="weekly"]').click();
+    badSource.classList.add("is-invalid");
+    badSource.focus();
+    toast("Bitte im Wochenbericht einen vollständigen Quellen-Link mit https:// eintragen.");
+    return;
+  }
   for (const platform of ["tiktok", "instagram"]) {
     const url = state.data.settings.socials[platform].url;
     if (url && !socialUrl(url, platform)) {
@@ -1223,9 +1251,122 @@ function initTeam() {
 }
 
 /* =========================================================
+   Wochenbericht
+   ========================================================= */
+let weeklyImage = null;
+const wk = () => state.data.settings.weekly;
+
+function weeklyStatus() {
+  const w = wk();
+  const el = $("#ad-weekly-status");
+  const missing = [!w.title.trim() && "Überschrift", !w.text.trim() && "Text"].filter(Boolean);
+  let cls = "is-off", html = `${icon("eye-off")}<span><strong>Ausgeschaltet.</strong> Auf der Website erscheint kein Wochenbericht – die Seite bleibt wie sie ist.</span>`;
+  if (w.visible && missing.length) {
+    cls = "is-warn";
+    html = `${icon("triangle-alert")}<span><strong>Eingeschaltet, aber es fehlt: ${missing.join(" und ")}.</strong> So erscheint er noch nicht auf der Website.</span>`;
+  } else if (w.visible) {
+    cls = "is-on";
+    html = `${icon("check")}<span><strong>Wird auf der Website angezeigt</strong>${state.dirty ? " – nach dem Veröffentlichen." : "."}</span>`;
+  }
+  el.className = `ad-weekly-status ${cls}`;
+  el.innerHTML = html;
+}
+
+function weeklySourceRow(q = { title: "", url: "" }) {
+  return `
+    <div class="ad-source">
+      <input type="text" data-src-title value="${esc(q.title)}" placeholder="Titel, z. B. UNHCR-Bericht" maxlength="120" aria-label="Titel der Quelle">
+      <input type="url" data-src-url value="${esc(q.url)}" placeholder="https://…" inputmode="url" aria-label="Link zur Quelle">
+      <button type="button" class="hb-iconbtn ad-danger" data-src-remove aria-label="Quelle entfernen">${icon("trash-2")}</button>
+    </div>`;
+}
+
+/** Quellen aus den Eingabefeldern übernehmen (leere Zeilen werden ignoriert). */
+function collectWeeklySources() {
+  wk().sources = [...$("#ad-weekly-sources").querySelectorAll(".ad-source")]
+    .map((row) => ({ title: row.querySelector("[data-src-title]").value.trim(), url: row.querySelector("[data-src-url]").value.trim() }))
+    .filter((q) => q.title || q.url);
+  $("#ad-weekly-add-source").hidden = $("#ad-weekly-sources").children.length >= MAX_SOURCES;
+}
+
+function renderWeeklyForm() {
+  const w = wk();
+  const form = $("#ad-weekly-form");
+  form.wVisible.checked = w.visible;
+  form.wTitle.value = w.title;
+  form.wDate.value = w.date;
+  form.wCredit.value = w.imageCredit;
+  form.wTeaser.value = w.teaser;
+  form.wText.value = w.text;
+  $("#ad-weekly-stats").innerHTML = w.stats.map((st, i) => `
+    <div class="ad-stat">
+      <span class="ad-stat__label">Statistik ${i + 1}</span>
+      <label class="ad-field"><span>Symbol</span>
+        <select name="wStat${i}Icon">${Object.entries(STAT_ICONS).map(([k, v]) => `<option value="${k}" ${st.icon === k ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
+      </label>
+      <label class="ad-field"><span>Wert</span><input name="wStat${i}Value" value="${esc(st.value)}" placeholder="z. B. 12.000" maxlength="30"></label>
+      <label class="ad-field ad-field--wide"><span>Beschreibung</span><input name="wStat${i}Label" value="${esc(st.label)}" placeholder="z. B. Mahlzeiten verteilt" maxlength="60"></label>
+    </div>`).join("");
+  $("#ad-weekly-sources").innerHTML = w.sources.map(weeklySourceRow).join("");
+  $("#ad-weekly-add-source").hidden = w.sources.length >= MAX_SOURCES;
+  weeklyImage.set(w.imageUrl);
+  weeklyStatus();
+}
+
+function initWeekly() {
+  const form = $("#ad-weekly-form");
+  weeklyImage = imageField(form.querySelector('[data-image="weekly"]'), {
+    label: "Foto", value: "", maxSize: 1800,
+    onChange: (url) => { wk().imageUrl = url; setDirty(true); }
+  });
+  /** Ein Feld übernehmen. Wird von "input" UND "change" aufgerufen (Schalter/Auswahl/Datum feuern je nach Browser nur eins davon). */
+  function onWeeklyField(t) {
+    const w = wk();
+    const m = t.name?.match(/^wStat(\d)(Icon|Value|Label)$/);
+    if (t.name === "wVisible") w.visible = t.checked;
+    else if (t.name === "wTitle") w.title = t.value;
+    else if (t.name === "wDate") w.date = t.value;
+    else if (t.name === "wCredit") w.imageCredit = t.value;
+    else if (t.name === "wTeaser") w.teaser = t.value;
+    else if (t.name === "wText") w.text = t.value;
+    else if (m) w.stats[Number(m[1])][m[2].toLowerCase()] = t.value;
+    else if (t.closest(".ad-source")) { t.classList.remove("is-invalid"); collectWeeklySources(); }
+    else return;
+    setDirty(true);
+  }
+  form.addEventListener("input", (e) => onWeeklyField(e.target));
+  form.addEventListener("change", (e) => onWeeklyField(e.target));
+  form.addEventListener("focusout", (e) => {
+    if (!e.target.matches("[data-src-url]")) return;
+    const v = e.target.value.trim();
+    e.target.classList.toggle("is-invalid", !!v && !URL_OK.test(v));
+  });
+  $("#ad-weekly-add-source").addEventListener("click", () => {
+    $("#ad-weekly-sources").insertAdjacentHTML("beforeend", weeklySourceRow());
+    $("#ad-weekly-sources").lastElementChild.querySelector("input").focus();
+    $("#ad-weekly-add-source").hidden = $("#ad-weekly-sources").children.length >= MAX_SOURCES;
+  });
+  $("#ad-weekly-sources").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-src-remove]");
+    if (!b) return;
+    b.closest(".ad-source").remove();
+    collectWeeklySources();
+    setDirty(true);
+  });
+}
+
+/** Vor dem Veröffentlichen: ungültige Quellen-Links im Wochenbericht melden. */
+function weeklyInvalidSource() {
+  const rows = [...$("#ad-weekly-sources").querySelectorAll(".ad-source")];
+  return rows.map((r) => r.querySelector("[data-src-url]")).find((inp) => inp.value.trim() && !URL_OK.test(inp.value.trim()))
+    || rows.map((r) => r.querySelector("[data-src-url]")).find((inp) => !inp.value.trim() && inp.closest(".ad-source").querySelector("[data-src-title]").value.trim());
+}
+
+/* =========================================================
    Start
    ========================================================= */
 function renderAll() {
+  renderWeeklyForm();
   renderCountries();
   renderProjects();
   renderSettings();
@@ -1244,6 +1385,7 @@ function init() {
   initTabs();
   initSettings();
   initTeam();
+  initWeekly();
   map = createMap($("#ad-map"), {
     onSelect: (id) => {
       const c = state.data.countries.find((x) => x.id === id);
